@@ -1,0 +1,14 @@
+name: temporal_logic_workspace
+description: A temporal logic packages for Dart and Flutter.
+publish_to: none # This repository is not meant to be published itself
+
+environment:
+  sdk: ">=3.6.0 <4.0.0" # Workspaces require Dart 3.6.0 or higher
+
+workspace:
+  - packages/temporal_logic_core
+  - packages/temporal_logic_mtl
+  - packages/temporal_logic_flutter
+  # Add example packages if they need to share the same resolution
+  # - examples/counter_ltl
+  # - examples/snackbar_mtl
