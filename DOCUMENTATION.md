@@ -30,7 +30,7 @@ Welcome to the detailed documentation for the `temporal_logic_core`, `temporal_l
       - [Evaluation (`evaluateMtlTrace`)](#evaluation-evaluatemtltrace)
     - [`temporal_logic_flutter` API](#temporal_logic_flutter-api)
       - [TraceRecorder](#tracerecorder)
-      - [Matchers (`satisfiesLtl`, `satisfiesMtl`)](#matchers-satisfiesltl-satisfiesmtl)
+      - [Matchers (`satisfiesLtl`)](#matchers-satisfiesltl)
   - [5. Cookbook \& Best Practices](#5-cookbook--best-practices)
     - [Integrating with State Management (Riverpod Example)](#integrating-with-state-management-riverpod-example)
     - [Designing Effective `AppSnap` Types](#designing-effective-appsnap-types)
@@ -127,7 +127,7 @@ void main() {
     await tester.pumpWidget(
       UncontrolledProviderScope(container: container, child: const MyApp()),
     );
-    await tester.pumpAndSettle(); // Let initial UI build
+    await tester.pumpAndSettle(); // Allow asynchronous operations and state changes to complete and be recorded
 
     // 4. Simulate User Interaction
     await tester.enterText(find.byKey(const Key('email')), 'valid@email.com');
@@ -384,17 +384,15 @@ A helper class designed for Flutter integration. It simplifies the process of ca
 - **Methods:**
   - `void initialize()`: Resets the recorder, clears any existing trace events, and records the starting time based on the `timeProvider`. This should be called at the beginning of each test or recording session.
   - `void record(T state)`: Captures the given `state` snapshot, associates it with the current timestamp obtained from the `timeProvider`, and adds it as a `TraceEvent<T>` to the internal trace.
-  - `void dispose()`: Performs any necessary cleanup (though currently minimal, it's good practice to call it, perhaps using `addTearDown` in tests).
 - **Getter:**
   - `Trace<T> get trace`: Returns the `Trace<T>` object containing all the `TraceEvent<T>` instances recorded since the last `initialize()` call.
 - **Typical Usage (Flutter Tests):**
     1. Instantiate `TraceRecorder<AppSnap>()`.
     2. Call `recorder.initialize()` at the start of the test.
     3. Use a state management listener (like `container.listen` for Riverpod) or manual calls within test interactions to call `recorder.record(AppSnap.fromAppState(...))` whenever a relevant state change occurs or an event needs marking.
-    4. After interactions, access `recorder.trace` and pass it to an `expect` statement with a `satisfiesLtl` or `satisfiesMtl` matcher.
-    5. Call `recorder.dispose()` using `addTearDown`.
+    4. After interactions, access `recorder.trace` and pass it to an `expect` statement with a `satisfiesLtl` matcher.
 
-#### Matchers (`satisfiesLtl`, `satisfiesMtl`)
+#### Matchers (`satisfiesLtl`)
 
 Custom `flutter_test` matchers that integrate temporal logic evaluation directly into your `expect` statements, making tests more readable.
 
@@ -413,24 +411,6 @@ Custom `flutter_test` matchers that integrate temporal logic evaluation directly
       ```
 
   - **Output on Failure:** When the match fails, it typically provides a descriptive error message, often including the reason from the underlying `EvaluationResult`, indicating where and why the formula was violated in the trace.
-
-- **`Matcher satisfiesMtl<T>(Formula<T> formula)`**
-  - **Purpose:** Creates a `Matcher` that checks if a given `Trace<T>` (with timestamps) satisfies the provided MTL `formula` (which can contain both LTL and timed operators).
-  - **Mechanism:** Internally, this matcher calls the `evaluateMtlTrace` function on the trace provided to `expect`.
-  - **Usage:**
-
-      ```dart
-      final trace = recorder.trace;
-      final mtlFormula = requestSent.implies(
-          responseReceived.eventuallyTimed(TimeInterval(Duration.zero, Duration(seconds: 5)))
-      );
-      expect(trace, tlFlutter.satisfiesMtl(mtlFormula));
-
-      // Can also be negated:
-      expect(timeoutTrace, isNot(tlFlutter.satisfiesMtl(mtlFormula)));
-      ```
-
-  - **Output on Failure:** Similar to `satisfiesLtl`, it provides a descriptive error message based on the `EvaluationResult` from `evaluateMtlTrace`, helping pinpoint the timing violation or logical failure.
 
 ## 5. Cookbook & Best Practices
 

@@ -30,7 +30,7 @@
 - ［評価 (`evaluateMtlTrace`)］(#evaluation-evaluatemtltrace)
 - ［`temporal_logic_flutter` API］(#temporal_logic_flutter-api)
       - ［トレースレコーダー］(#tracerecorder)
-- ［マッチャー (`satisfiesLtl`， `satisfiesMtl`)］(#matchers-satisfiesltl-satisfiesmtl)
+- ［マッチャー (`satisfiesLtl`)］(#matchers-satisfiesltl)
 - ［5. クックブック & ベストプラクティス］(#5-cookbook--best-practices)
   - ［状態管理との統合 (Riverpod 例)］(#integrating-with-state-management-riverpod-example)
 - ［効果的な `AppSnap` タイプの設計］(#designing-effective-appsnap-types)
@@ -164,7 +164,7 @@ void main() {
     // 7. 検証： 記録されたAppSnapsのシーケンス(トレース)が式を満たすかどうかを確認する。
     final trace = recorder.trace;
     // temporal_logic_flutter からカスタムマッチャーを使用
-    expect(trace, tlFlutter.satisfiesLtl(formula));
+    expect(trace, tlFlutter.satisfiesLtl(formula)); // または satisfiesMtl
   });
 }
 ```
@@ -394,10 +394,10 @@ Flutter 統合用に設計されたヘルパークラスです。実行中のア
 1. `TraceRecorder<AppSnap>()` をインスタンス化します。
 2. テストの開始時に `recorder.initialize()` を呼び出します。
     3. 状態管理リスナー(Riverpod の `container.listen` など)またはテストインタラクション内の手動呼び出しを使用して、関連する状態変更が発生したりイベントをマークする必要があるたびに `recorder.record(AppSnap.fromAppState(...))` を呼び出します。
-4. インタラクション後、`recorder.trace` にアクセスし、`satisfiesLtl` または `satisfiesMtl` マッチャーと共に `expect` ステートメントに渡しします。
+4. インタラクション後、`recorder.trace` にアクセスし、`satisfiesLtl` マッチャーと共に `expect` ステートメントに渡しします。
     5. `addTearDown` を使用して `recorder.dispose()` を呼び出します。
 
-#### マッチャー (`satisfiesLtl`， `satisfiesMtl`)
+#### マッチャー (`satisfiesLtl`)
 
 カスタム `flutter_test` マッチャーで、時制論理の評価を `expect` ステートメントに直接統合し、テストの読みやすさを向上させます。
 
@@ -417,25 +417,7 @@ expect(failedTrace, isNot(tlFlutter.satisfiesLtl(ltlFormula)));
 
 - **失敗時の出力：** マッチが失敗した場合、通常は説明的なエラーメッセージが提供され、多くの場合、基盤となる `EvaluationResult` から理由を含み、トレース内で式が違反した場所と理由を示します。
 
-- **`Matcher satisfiesMtl<T>(Formula<T> formula)`**
-  - **目的： 指定された `Trace<T>` (タイムスタンプ付き) が、提供された MTL `formula` (LTL とタイムド演算子を含む) を満たすかどうかを確認する `Matcher` を作成します。
-- **メカニズム： 内部では、このマッチャーは `expect` に渡されたトレースに対して `evaluateMtlTrace` 関数を呼び出します。
-- **使用方法：
-
-```dart
-final trace = recorder.trace;
-final mtlFormula = requestSent.implies(
-    responseReceived.eventuallyTimed(TimeInterval(Duration.zero, Duration(seconds: 5)));
-);
-expect(trace, tlFlutter.satisfiesMtl(mtlFormula));
-
-// 否定形も可能です：
-expect(timeoutTrace, isNot(tlFlutter.satisfiesMtl(mtlFormula)));
-```
-
-- **失敗時の出力： `satisfiesLtl`と同様に、`evaluateMtlTrace`から取得した`EvaluationResult`に基づいて説明的なエラーメッセージを提供し、タイミング違反や論理的な失敗を特定するのに役立ちます。
-
-## 5. クックブックとベストプラクティス
+## 5. クックブック & ベストプラクティス
 
 このセクションでは、プロジェクトで時制論理パッケージを効果的に使用する実践的なアドバイス、パターン、コードスニペットを提供します。
 
@@ -509,7 +491,7 @@ void main() {
     recorder.record(AppSnap.fromAppState(stateBeforeClick, loginClicked: true));
 
     // ボタンを検索してタップ(プロバイダー経由でAppStateを更新すると仮定)
-    await tester.tap(find.byKey(const Key('loginButton')));
+    await tester.tap(find.byKey(const Key('login')));
 
     // 非同期操作と状態更新の propagation を待つ
     await tester.pumpAndSettle();
@@ -518,10 +500,10 @@ void main() {
     final trace = recorder.trace;
     final formula = tlCore.always(/* ... あなたの LTL/MTL 式 ... */);
 
-    expect(trace, tlFlutter.satisfiesLtl(formula)); // または satisfiesMtl
+    expect(trace, tlFlutter.satisfiesLtl(formula));
 
-    // レコーダーは addTearDown 経由で自動的に破棄されますが、
-    // コンテナの破棄は通常より重要な部分です。
+    // レコーダーは必要に応じてaddTearDown経由で自動的に破棄されますが、
+    // コンテナの破棄が通常より重要な部分です。
   });
 }
 ```
@@ -851,10 +833,10 @@ final formula = tlCore.always(loginClicked.implies(tlCore.next(isLoading)));
 一時論理テストの記述と実行時に遭遇する一般的な問題とデバッグ戦略を以下に示します：
 
 - **式が期待通りに評価されない(テストが論理的に失敗する)：**
-- **症状： `expect(trace， satisfiesLtl/Mtl(formula))` が失敗するが、アプリケーション論理は正しいと信じている。
-- **命題定義の確認：
-  - **`state` vs `event`： 一時的にのみ成立する条件に `tlCore.state` を使用しましたか、または持続する条件に `tlCore.event` を使用しましたか？セクション 3 - 命題： `state` vs `event` およびセクション 4 - API リファレンスを確認してください。
-  - **述語論理：** `state`/`event` 内の述語関数 `(s) => ...` が、`AppSnap` フィールドに基づいて条件を正しく反映していますか？述語内にプリント文を追加するか、別でテストしてください。
+- **症状： `expect(trace， satisfiesLtl(formula))` が失敗するが、アプリケーション論理は正しいと信じている。
+  - **命題定義の確認：**
+    - **`state` vs `event`： 一時的にのみ成立する条件に `tlCore.state` を使用しましたか、または持続する条件に `tlCore.event` を使用しましたか？セクション 3 - 命題： `state` vs `event` およびセクション 4 - API リファレンスを確認してください。
+    - **述語論理：** `state`/`event` 内の述語関数 `(s) => ...` が、`AppSnap` フィールドに基づいて条件を正しく反映していますか？述語内にプリント文を追加するか、別でテストしてください。
 - **`AppSnap` マッピング：** `AppSnap.fromAppState` ファクトリが、実際のアプリケーション状態を命題で使用される`AppSnap` フィールドに正しくマッピングしていますか？このマッピング論理を確認してください。
   - **式論理の確認：**
 - **演算子の意味論： LTL/MTL演算子(X， G， F， U， R， G［］， F［］)の理解を再確認してください。表現したい性質に適切な演算子を使用していますか？セクション3および4を参照してください。
