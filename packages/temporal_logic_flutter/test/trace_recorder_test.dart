@@ -25,16 +25,19 @@ void main() {
         recorder.record('a'); // Should be at 10ms relative to initialize
 
         async.elapse(const Duration(milliseconds: 20));
-        recorder.record('b'); // Should be at 30ms relative to initialize (10 + 20)
+        recorder
+            .record('b'); // Should be at 30ms relative to initialize (10 + 20)
 
         final trace = recorder.trace;
 
         expect(trace.length, 2);
         expect(trace.events[0].value, 'a');
-        expect(trace.events[0].timestamp, equals(const Duration(milliseconds: 10)));
+        expect(trace.events[0].timestamp,
+            equals(const Duration(milliseconds: 10)));
 
         expect(trace.events[1].value, 'b');
-        expect(trace.events[1].timestamp, equals(const Duration(milliseconds: 30)));
+        expect(trace.events[1].timestamp,
+            equals(const Duration(milliseconds: 30)));
       });
     });
 
@@ -62,12 +65,14 @@ void main() {
         async.elapse(const Duration(milliseconds: 5));
         recorder.record(100);
         expect(recorder.trace.length, 1);
-        expect(recorder.trace.events[0].timestamp, equals(const Duration(milliseconds: 5)));
+        expect(recorder.trace.events[0].timestamp,
+            equals(const Duration(milliseconds: 5)));
 
         // Second initialization
         async.elapse(const Duration(milliseconds: 50)); // Ensure time passes
         recorder.initialize(); // Re-initialize
-        expect(recorder.trace.isEmpty, isTrue, reason: 'Trace should be empty after re-initialize');
+        expect(recorder.trace.isEmpty, isTrue,
+            reason: 'Trace should be empty after re-initialize');
 
         // Add new event relative to the *second* initialization time
         async.elapse(const Duration(milliseconds: 15));
@@ -76,7 +81,8 @@ void main() {
         final trace = recorder.trace;
         expect(trace.length, 1);
         expect(trace.events[0].value, 200);
-        expect(trace.events[0].timestamp, equals(const Duration(milliseconds: 15)));
+        expect(trace.events[0].timestamp,
+            equals(const Duration(milliseconds: 15)));
       });
     });
 
@@ -93,7 +99,8 @@ void main() {
         recorder.record(1); // Event should be at 10ms relative to start
 
         expect(recorder.trace.length, 1);
-        expect(recorder.trace.events[0].timestamp, equals(const Duration(milliseconds: 10)));
+        expect(recorder.trace.events[0].timestamp,
+            equals(const Duration(milliseconds: 10)));
       });
     });
 
@@ -106,7 +113,8 @@ void main() {
         recorder.record('test');
         expect(recorder.trace.length, 1);
         expect(recorder.trace.events[0].value, 'test');
-        expect(recorder.trace.events[0].timestamp, equals(const Duration(milliseconds: 2)));
+        expect(recorder.trace.events[0].timestamp,
+            equals(const Duration(milliseconds: 2)));
       });
     });
 
@@ -124,7 +132,8 @@ void main() {
         // Expected if the list is unmodifiable
       }
       // Check if the recorder's internal state was affected
-      expect(recorder.trace.length, 1, reason: 'Original recorder trace should remain unchanged');
+      expect(recorder.trace.length, 1,
+          reason: 'Original recorder trace should remain unchanged');
     });
 
     test('record without initialize throws StateError', () {
@@ -144,7 +153,8 @@ void main() {
       recorder.record('a');
 
       expect(recorder.trace.length, 3);
-      expect(recorder.trace.events.map((e) => e.value).toList(), equals(['a', 'b', 'a']));
+      expect(recorder.trace.events.map((e) => e.value).toList(),
+          equals(['a', 'b', 'a']));
     });
 
     test('record adds duplicates when recordDuplicates is true', () {
@@ -156,7 +166,8 @@ void main() {
       recorder.record('b', recordDuplicates: true);
 
       expect(recorder.trace.length, 3);
-      expect(recorder.trace.events.map((e) => e.value).toList(), equals(['a', 'a', 'b']));
+      expect(recorder.trace.events.map((e) => e.value).toList(),
+          equals(['a', 'a', 'b']));
     });
   });
 }

@@ -65,7 +65,8 @@ class StreamSustainedStateChecker<S> {
 
     if (newState == _targetState) {
       // Entered or stayed in target state
-      if (_targetStateEnteredTime == null || _resultNotifier.value == CheckStatus.failure) {
+      if (_targetStateEnteredTime == null ||
+          _resultNotifier.value == CheckStatus.failure) {
         // Start/Restart timer if not already running or if recovering from failure
         _targetStateEnteredTime = currentTime;
         _setResult(CheckStatus.pending);
@@ -73,7 +74,8 @@ class StreamSustainedStateChecker<S> {
         _sustainTimer = Timer(_sustainDuration, () {
           // Timer completed, check if we are *still* in the target state implicitly
           // and if the status was still pending.
-          if (_resultNotifier.value == CheckStatus.pending && _targetStateEnteredTime != null) {
+          if (_resultNotifier.value == CheckStatus.pending &&
+              _targetStateEnteredTime != null) {
             _setResult(CheckStatus.success);
             // Keep _targetStateEnteredTime, status is now Success until exited
           }

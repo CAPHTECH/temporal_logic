@@ -140,7 +140,8 @@ class StreamLtlChecker<S> {
     // Standard LTL semantics evaluate over the suffix starting at the index.
     // Evaluating ONLY the last state (index _trace.length - 1) is common for simple checks.
     // Let's stick to standard suffix evaluation starting at the current point (last index).
-    final result = evaluateTrace(timedTrace, _formula, startIndex: _trace.length - 1);
+    final result =
+        evaluateTrace(timedTrace, _formula, startIndex: _trace.length - 1);
     return result.holds;
   }
 

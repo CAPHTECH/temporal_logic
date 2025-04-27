@@ -40,18 +40,23 @@ void main() {
     }
 
     // Helper to create TimedValue with duration from start
-    TimedValue<TestState> timed(TestState state, Duration timeFromStart) => TimedValue(state, timeFromStart);
+    TimedValue<TestState> timed(TestState state, Duration timeFromStart) =>
+        TimedValue(state, timeFromStart);
 
-    testWidgets('Initial state is Failure when no initial value matches', (WidgetTester tester) async {
-      await tester.pumpWidget(buildTestableWidget(initialValue: timed(TestState.initial, Duration.zero)));
+    testWidgets('Initial state is Failure when no initial value matches',
+        (WidgetTester tester) async {
+      await tester.pumpWidget(buildTestableWidget(
+          initialValue: timed(TestState.initial, Duration.zero)));
 
       // Expect Failure because initial state is not target
       expect(find.byIcon(Icons.check_circle), findsNothing);
       expect(find.byIcon(Icons.cancel), findsOneWidget);
     });
 
-    testWidgets('Initial state is Pending when initial value matches target', (WidgetTester tester) async {
-      await tester.pumpWidget(buildTestableWidget(initialValue: timed(TestState.target, Duration.zero)));
+    testWidgets('Initial state is Pending when initial value matches target',
+        (WidgetTester tester) async {
+      await tester.pumpWidget(buildTestableWidget(
+          initialValue: timed(TestState.target, Duration.zero)));
 
       // Starts Pending because duration hasn't elapsed
       expect(find.byIcon(Icons.hourglass_empty), findsOneWidget);
@@ -59,12 +64,14 @@ void main() {
       expect(find.byIcon(Icons.cancel), findsNothing);
     });
 
-    testWidgets('Transitions to Success when target state is sustained', (WidgetTester tester) async {
+    testWidgets('Transitions to Success when target state is sustained',
+        (WidgetTester tester) async {
       final startTime = tester.binding.clock.now();
       Duration elapsed() => tester.binding.clock.now().difference(startTime);
 
       // Start with initial non-target state -> should show Failure initially
-      await tester.pumpWidget(buildTestableWidget(initialValue: timed(TestState.initial, Duration.zero)));
+      await tester.pumpWidget(buildTestableWidget(
+          initialValue: timed(TestState.initial, Duration.zero)));
       expect(find.byIcon(Icons.cancel), findsOneWidget);
 
       streamController.add(timed(TestState.target, elapsed()));
@@ -86,12 +93,14 @@ void main() {
       expect(find.byIcon(Icons.cancel), findsNothing);
     });
 
-    testWidgets('Transitions to Failure if leaves target state early', (WidgetTester tester) async {
+    testWidgets('Transitions to Failure if leaves target state early',
+        (WidgetTester tester) async {
       final startTime = tester.binding.clock.now();
       Duration elapsed() => tester.binding.clock.now().difference(startTime);
 
       // Start with initial non-target state -> should show Failure initially
-      await tester.pumpWidget(buildTestableWidget(initialValue: timed(TestState.initial, Duration.zero)));
+      await tester.pumpWidget(buildTestableWidget(
+          initialValue: timed(TestState.initial, Duration.zero)));
       expect(find.byIcon(Icons.cancel), findsOneWidget);
 
       streamController.add(timed(TestState.target, elapsed()));
@@ -109,12 +118,14 @@ void main() {
       expect(find.byIcon(Icons.check_circle), findsNothing);
     });
 
-    testWidgets('Resets to Pending and succeeds if re-enters target', (WidgetTester tester) async {
+    testWidgets('Resets to Pending and succeeds if re-enters target',
+        (WidgetTester tester) async {
       final startTime = tester.binding.clock.now();
       Duration elapsed() => tester.binding.clock.now().difference(startTime);
 
       // Start with initial non-target state -> should show Failure initially
-      await tester.pumpWidget(buildTestableWidget(initialValue: timed(TestState.initial, Duration.zero)));
+      await tester.pumpWidget(buildTestableWidget(
+          initialValue: timed(TestState.initial, Duration.zero)));
       expect(find.byIcon(Icons.cancel), findsOneWidget);
 
       // Enter target, leave early -> Failure
@@ -143,7 +154,8 @@ void main() {
       expect(find.byIcon(Icons.check_circle), findsOneWidget);
     });
 
-    testWidgets('Uses custom builder when provided', (WidgetTester tester) async {
+    testWidgets('Uses custom builder when provided',
+        (WidgetTester tester) async {
       final startTime = tester.binding.clock.now();
       Duration elapsed() => tester.binding.clock.now().difference(startTime);
 
@@ -173,12 +185,14 @@ void main() {
       expect(find.text('Status: success'), findsOneWidget);
     });
 
-    testWidgets('Handles stream closing gracefully', (WidgetTester tester) async {
+    testWidgets('Handles stream closing gracefully',
+        (WidgetTester tester) async {
       final startTime = tester.binding.clock.now();
       Duration elapsed() => tester.binding.clock.now().difference(startTime);
 
       // Start Failure
-      await tester.pumpWidget(buildTestableWidget(initialValue: timed(TestState.initial, Duration.zero)));
+      await tester.pumpWidget(buildTestableWidget(
+          initialValue: timed(TestState.initial, Duration.zero)));
       expect(find.byIcon(Icons.cancel), findsOneWidget);
 
       // Become Success
@@ -199,15 +213,18 @@ void main() {
       expect(find.byIcon(Icons.cancel), findsNothing);
     });
 
-    testWidgets('Transitions to Failure if stream ends while pending', (WidgetTester tester) async {
+    testWidgets('Transitions to Failure if stream ends while pending',
+        (WidgetTester tester) async {
       final startTime = tester.binding.clock.now();
       Duration elapsed() => tester.binding.clock.now().difference(startTime);
 
-      await tester.pumpWidget(buildTestableWidget(initialValue: timed(TestState.initial, Duration.zero)));
+      await tester.pumpWidget(buildTestableWidget(
+          initialValue: timed(TestState.initial, Duration.zero)));
       expect(find.byIcon(Icons.cancel), findsOneWidget); // Pending
 
       streamController.add(timed(TestState.target, elapsed()));
-      await tester.pump(sustainDuration * 0.5); // Enter target, but not long enough
+      await tester
+          .pump(sustainDuration * 0.5); // Enter target, but not long enough
       expect(find.byIcon(Icons.hourglass_empty), findsOneWidget);
       expect(find.byIcon(Icons.cancel), findsNothing);
 

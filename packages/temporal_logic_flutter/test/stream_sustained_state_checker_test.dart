@@ -35,7 +35,8 @@ void main() {
       await controller.close();
     });
 
-    TimedValue<TestState> tv(TestState state, int millis) => TimedValue(state, Duration(milliseconds: millis));
+    TimedValue<TestState> tv(TestState state, int millis) =>
+        TimedValue(state, Duration(milliseconds: millis));
 
     // Helper function to initialize checker and listener
     void initializeChecker({TimedValue<TestState>? initialValue}) {
@@ -54,7 +55,8 @@ void main() {
 
       // Wait for timer to complete
       await Future.delayed(sustainDuration * 1.5);
-      controller.add(tv(TestState.target, 150)); // Add event to potentially trigger final check
+      controller.add(tv(TestState.target,
+          150)); // Add event to potentially trigger final check
       await pumpEventQueue(); // Allow listener to fire
 
       expect(

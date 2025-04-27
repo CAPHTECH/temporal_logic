@@ -107,4 +107,4 @@ class _SustainedStateCheckerWidgetState<S>
       },
     );
   }
-} 
+}

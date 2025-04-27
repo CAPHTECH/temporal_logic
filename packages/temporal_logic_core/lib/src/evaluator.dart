@@ -48,7 +48,8 @@ class EvaluationResult {
   /// - [reason]: Optional explanation, especially for failures.
   /// - [relatedTimestamp]: Optional timestamp related to the outcome.
   /// - [relatedIndex]: Optional index related to the outcome.
-  const EvaluationResult(this.holds, {this.reason, this.relatedTimestamp, this.relatedIndex});
+  const EvaluationResult(this.holds,
+      {this.reason, this.relatedTimestamp, this.relatedIndex});
 
   /// Creates a successful evaluation result (`holds` is `true`).
   /// Provides minimal information, suitable when only success/failure matters.
@@ -57,7 +58,9 @@ class EvaluationResult {
   /// Creates a failure evaluation result (`holds` is `false`).
   /// Requires a [reason] explaining the failure.
   /// Optionally includes [relatedTimestamp] and [relatedIndex] for context.
-  const EvaluationResult.failure(String this.reason, {this.relatedTimestamp, this.relatedIndex}) : holds = false;
+  const EvaluationResult.failure(String this.reason,
+      {this.relatedTimestamp, this.relatedIndex})
+      : holds = false;
 
   /// Provides a concise string representation of the result.
   /// Includes the reason and location (time/index) if available.
@@ -114,13 +117,16 @@ class EvaluationResult {
 ///     - `Eventually(f)` is `false` on an empty suffix.
 ///     - `AtomicProposition(p)` fails because there is no state to evaluate.
 ///     - Other operators are handled recursively.
-EvaluationResult evaluateTrace<T>(Trace<T> trace, Formula<T> formula, {int startIndex = 0}) {
+EvaluationResult evaluateTrace<T>(Trace<T> trace, Formula<T> formula,
+    {int startIndex = 0}) {
   // Initial checks might be added here, but core logic delegates to _evaluateFormula.
   // Bounds checking related to startIndex is often handled within the specific
   // operator logic as they look into the future of the trace.
   if (startIndex < 0) {
     // Returning failure here as negative indices are always invalid.
-    return EvaluationResult.failure('Start index $startIndex cannot be negative.', relatedIndex: startIndex);
+    return EvaluationResult.failure(
+        'Start index $startIndex cannot be negative.',
+        relatedIndex: startIndex);
   }
   // Allow startIndex >= trace.length, as some formulas (like G(p)) can be vacuously true
   // on an empty trace suffix.
@@ -129,7 +135,8 @@ EvaluationResult evaluateTrace<T>(Trace<T> trace, Formula<T> formula, {int start
 }
 
 // Internal recursive evaluation function
-EvaluationResult _evaluateFormula<T>(Trace<T> trace, Formula<T> formula, int index) {
+EvaluationResult _evaluateFormula<T>(
+    Trace<T> trace, Formula<T> formula, int index) {
   // Check bounds for the current evaluation index
   // Many operators need to look ahead, so they handle their own bounds checks relative to `index`.
   // However, accessing trace.events[index] requires index < trace.length.
@@ -142,7 +149,9 @@ EvaluationResult _evaluateFormula<T>(Trace<T> trace, Formula<T> formula, int ind
   switch (formula) {
     case AtomicProposition<T> p:
       if (index >= trace.length)
-        return EvaluationResult.failure("Atomic proposition evaluated past trace end.", relatedIndex: index);
+        return EvaluationResult.failure(
+            "Atomic proposition evaluated past trace end.",
+            relatedIndex: index);
       final holds = p.predicate(trace.events[index].value);
       return EvaluationResult(holds,
           reason: !holds ? '${p.name ?? "Atomic"} failed' : null,
@@ -152,7 +161,8 @@ EvaluationResult _evaluateFormula<T>(Trace<T> trace, Formula<T> formula, int ind
     case Not<T> f:
       final innerResult = _evaluateFormula(trace, f.operand, index);
       return EvaluationResult(!innerResult.holds,
-          reason: innerResult.holds ? 'Negated formula held' : innerResult.reason,
+          reason:
+              innerResult.holds ? 'Negated formula held' : innerResult.reason,
           relatedIndex: innerResult.relatedIndex,
           relatedTimestamp: innerResult.relatedTimestamp);
 
@@ -166,7 +176,8 @@ EvaluationResult _evaluateFormula<T>(Trace<T> trace, Formula<T> formula, int ind
 
     case Or<T> f:
       final leftResult = _evaluateFormula(trace, f.left, index);
-      if (leftResult.holds) return const EvaluationResult.success(); // Short-circuit
+      if (leftResult.holds)
+        return const EvaluationResult.success(); // Short-circuit
       final rightResult = _evaluateFormula(trace, f.right, index);
       // If left failed and right held, return success.
       if (rightResult.holds) return const EvaluationResult.success();
@@ -177,7 +188,9 @@ EvaluationResult _evaluateFormula<T>(Trace<T> trace, Formula<T> formula, int ind
 
     case Implies<T> f:
       final leftResult = _evaluateFormula(trace, f.left, index);
-      if (!leftResult.holds) return const EvaluationResult.success(); // Antecedent is false, implication holds
+      if (!leftResult.holds)
+        return const EvaluationResult
+            .success(); // Antecedent is false, implication holds
       final rightResult = _evaluateFormula(trace, f.right, index);
       // Antecedent is true, result depends on consequent
       if (!rightResult.holds)
@@ -190,7 +203,8 @@ EvaluationResult _evaluateFormula<T>(Trace<T> trace, Formula<T> formula, int ind
     case Next<T> f:
       final nextIndex = index + 1;
       if (nextIndex >= trace.length)
-        return EvaluationResult.failure('Next evaluated past trace end.', relatedIndex: index);
+        return EvaluationResult.failure('Next evaluated past trace end.',
+            relatedIndex: index);
       // Evaluate operand at the next index
       return _evaluateFormula(trace, f.operand, nextIndex);
 
@@ -198,27 +212,35 @@ EvaluationResult _evaluateFormula<T>(Trace<T> trace, Formula<T> formula, int ind
       for (var k = index; k < trace.length; k++) {
         final stepResult = _evaluateFormula(trace, f.operand, k);
         if (!stepResult.holds) {
-          return EvaluationResult.failure('Always failed: ${stepResult.reason ?? "Operand failed"}',
-              relatedIndex: k, relatedTimestamp: trace.events[k].timestamp);
+          return EvaluationResult.failure(
+              'Always failed: ${stepResult.reason ?? "Operand failed"}',
+              relatedIndex: k,
+              relatedTimestamp: trace.events[k].timestamp);
         }
       }
-      return const EvaluationResult.success(); // Holds for all steps (or trace suffix was empty)
+      return const EvaluationResult
+          .success(); // Holds for all steps (or trace suffix was empty)
 
     case Eventually<T> f:
       if (index >= trace.length)
-        return EvaluationResult.failure('Eventually evaluated on empty trace suffix.',
+        return EvaluationResult.failure(
+            'Eventually evaluated on empty trace suffix.',
             relatedIndex: index); // F(p) is false on empty suffix
       for (var k = index; k < trace.length; k++) {
         final stepResult = _evaluateFormula(trace, f.operand, k);
         if (stepResult.holds) {
-          return const EvaluationResult.success(); // Found a state where it holds
+          return const EvaluationResult
+              .success(); // Found a state where it holds
         }
       }
-      return EvaluationResult.failure('Eventually failed: Operand never held.', relatedIndex: index); // Never held
+      return EvaluationResult.failure('Eventually failed: Operand never held.',
+          relatedIndex: index); // Never held
 
     case Until<T> f:
       if (index >= trace.length)
-        return EvaluationResult.failure('Until evaluated on empty trace suffix.', relatedIndex: index);
+        return EvaluationResult.failure(
+            'Until evaluated on empty trace suffix.',
+            relatedIndex: index);
       for (var k = index; k < trace.length; k++) {
         final rightResult = _evaluateFormula(trace, f.right, k);
         if (rightResult.holds) {
@@ -232,7 +254,8 @@ EvaluationResult _evaluateFormula<T>(Trace<T> trace, Formula<T> formula, int ind
                   relatedTimestamp: trace.events[j].timestamp);
             }
           }
-          return const EvaluationResult.success(); // Right held, left held until then
+          return const EvaluationResult
+              .success(); // Right held, left held until then
         }
         // Right didn't hold at k, so left must hold at k to continue
         final leftResult = _evaluateFormula(trace, f.left, k);

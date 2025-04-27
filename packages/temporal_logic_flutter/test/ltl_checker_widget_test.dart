@@ -27,9 +27,12 @@ void main() {
 
     setUp(() {
       streamController = StreamController<TestState>.broadcast();
-      formulaAlwaysTrue = always(state<TestState>((s) => s.value, name: 'p')); // G(p)
-      formulaAlwaysFalse = always(state<TestState>((s) => !s.value, name: '!p')); // G(!p)
-      formulaEventuallyTrue = eventually(state<TestState>((s) => s.value, name: 'p')); // F(p)
+      formulaAlwaysTrue =
+          always(state<TestState>((s) => s.value, name: 'p')); // G(p)
+      formulaAlwaysFalse =
+          always(state<TestState>((s) => !s.value, name: '!p')); // G(!p)
+      formulaEventuallyTrue =
+          eventually(state<TestState>((s) => s.value, name: 'p')); // F(p)
     });
 
     tearDown(() {
@@ -57,16 +60,20 @@ void main() {
       );
     }
 
-    testWidgets('Initial state is calculated correctly (G(p) on empty is true)', (WidgetTester tester) async {
+    testWidgets('Initial state is calculated correctly (G(p) on empty is true)',
+        (WidgetTester tester) async {
       // G(p) is vacuously true on an empty trace
-      await tester.pumpWidget(buildTestableWidget(stream: streamController.stream, formula: formulaAlwaysTrue));
+      await tester.pumpWidget(buildTestableWidget(
+          stream: streamController.stream, formula: formulaAlwaysTrue));
 
       // Expect Check icon (initial result is true)
       expect(find.byIcon(Icons.check_circle), findsOneWidget);
       expect(find.byIcon(Icons.cancel), findsNothing);
     });
 
-    testWidgets('Initial state with initialValue is calculated correctly (G(p) on [T])', (WidgetTester tester) async {
+    testWidgets(
+        'Initial state with initialValue is calculated correctly (G(p) on [T])',
+        (WidgetTester tester) async {
       // G(p) on trace [T] is true
       await tester.pumpWidget(buildTestableWidget(
         stream: streamController.stream,
@@ -88,7 +95,9 @@ void main() {
       expect(find.byIcon(Icons.check_circle), findsNothing);
     });
 
-    testWidgets('Initial state with initialValue is calculated correctly (G(p) on [F])', (WidgetTester tester) async {
+    testWidgets(
+        'Initial state with initialValue is calculated correctly (G(p) on [F])',
+        (WidgetTester tester) async {
       // G(p) on trace [F] is false
       await tester.pumpWidget(buildTestableWidget(
         stream: streamController.stream,
@@ -101,10 +110,13 @@ void main() {
       expect(find.byIcon(Icons.check_circle), findsNothing);
     });
 
-    testWidgets('Displays Success when formula holds', (WidgetTester tester) async {
+    testWidgets('Displays Success when formula holds',
+        (WidgetTester tester) async {
       // Start with initial G(p) = true
-      await tester.pumpWidget(buildTestableWidget(stream: streamController.stream, formula: formulaAlwaysTrue));
-      expect(find.byIcon(Icons.check_circle), findsOneWidget, reason: "Initial state should be true");
+      await tester.pumpWidget(buildTestableWidget(
+          stream: streamController.stream, formula: formulaAlwaysTrue));
+      expect(find.byIcon(Icons.check_circle), findsOneWidget,
+          reason: "Initial state should be true");
 
       // Emit states that satisfy the formula
       streamController.add(TestState(true));
@@ -117,10 +129,13 @@ void main() {
       expect(find.byIcon(Icons.cancel), findsNothing);
     });
 
-    testWidgets('Displays Failure when formula does not hold', (WidgetTester tester) async {
+    testWidgets('Displays Failure when formula does not hold',
+        (WidgetTester tester) async {
       // Start with initial G(p) = true
-      await tester.pumpWidget(buildTestableWidget(stream: streamController.stream, formula: formulaAlwaysTrue));
-      expect(find.byIcon(Icons.check_circle), findsOneWidget, reason: "Initial state should be true");
+      await tester.pumpWidget(buildTestableWidget(
+          stream: streamController.stream, formula: formulaAlwaysTrue));
+      expect(find.byIcon(Icons.check_circle), findsOneWidget,
+          reason: "Initial state should be true");
 
       // Emit states, one of which violates the formula
       streamController.add(TestState(true)); // Stays true
@@ -134,9 +149,11 @@ void main() {
       expect(find.byIcon(Icons.check_circle), findsNothing);
     });
 
-    testWidgets('Updates display when formula result changes', (WidgetTester tester) async {
+    testWidgets('Updates display when formula result changes',
+        (WidgetTester tester) async {
       // F(p) initially false on empty trace
-      await tester.pumpWidget(buildTestableWidget(stream: streamController.stream, formula: formulaEventuallyTrue));
+      await tester.pumpWidget(buildTestableWidget(
+          stream: streamController.stream, formula: formulaEventuallyTrue));
 
       // Initially formula is false (nothing emitted yet)
       expect(find.byIcon(Icons.cancel), findsOneWidget);
@@ -154,7 +171,8 @@ void main() {
       expect(find.byIcon(Icons.check_circle), findsOneWidget);
     });
 
-    testWidgets('Uses custom builder when provided', (WidgetTester tester) async {
+    testWidgets('Uses custom builder when provided',
+        (WidgetTester tester) async {
       // G(p) initially true
       await tester.pumpWidget(
         buildTestableWidget(
@@ -182,9 +200,11 @@ void main() {
       expect(find.text('Does not hold'), findsOneWidget);
     });
 
-    testWidgets('Handles stream closing gracefully', (WidgetTester tester) async {
+    testWidgets('Handles stream closing gracefully',
+        (WidgetTester tester) async {
       // G(p) initially true
-      await tester.pumpWidget(buildTestableWidget(stream: streamController.stream, formula: formulaAlwaysTrue));
+      await tester.pumpWidget(buildTestableWidget(
+          stream: streamController.stream, formula: formulaAlwaysTrue));
       expect(find.byIcon(Icons.check_circle), findsOneWidget); // Initial true
 
       streamController.add(TestState(true));
@@ -200,12 +220,14 @@ void main() {
       expect(find.byIcon(Icons.cancel), findsNothing);
     });
 
-    testWidgets('Updates checker when stream changes', (WidgetTester tester) async {
+    testWidgets('Updates checker when stream changes',
+        (WidgetTester tester) async {
       var streamController1 = StreamController<TestState>.broadcast();
       var streamController2 = StreamController<TestState>.broadcast();
 
       // Build with stream 1, F(p) is initially false
-      await tester.pumpWidget(buildTestableWidget(stream: streamController1.stream, formula: formulaEventuallyTrue));
+      await tester.pumpWidget(buildTestableWidget(
+          stream: streamController1.stream, formula: formulaEventuallyTrue));
       expect(find.byIcon(Icons.cancel), findsOneWidget);
 
       // Add true event to stream 1 -> F(p) becomes true
@@ -214,7 +236,8 @@ void main() {
       expect(find.byIcon(Icons.check_circle), findsOneWidget);
 
       // Rebuild with stream 2 (which is empty) -> F(p) becomes false again
-      await tester.pumpWidget(buildTestableWidget(stream: streamController2.stream, formula: formulaEventuallyTrue));
+      await tester.pumpWidget(buildTestableWidget(
+          stream: streamController2.stream, formula: formulaEventuallyTrue));
       await tester.pumpAndSettle(); // Ensure all frames/microtasks settle
       expect(find.byIcon(Icons.cancel), findsOneWidget);
 
@@ -228,9 +251,11 @@ void main() {
       streamController2.close();
     });
 
-    testWidgets('Updates checker when formula changes', (WidgetTester tester) async {
+    testWidgets('Updates checker when formula changes',
+        (WidgetTester tester) async {
       // Start with G(p), initially true
-      await tester.pumpWidget(buildTestableWidget(stream: streamController.stream, formula: formulaAlwaysTrue));
+      await tester.pumpWidget(buildTestableWidget(
+          stream: streamController.stream, formula: formulaAlwaysTrue));
       expect(find.byIcon(Icons.check_circle), findsOneWidget);
 
       // Add true event, stays true
@@ -239,7 +264,8 @@ void main() {
       expect(find.byIcon(Icons.check_circle), findsOneWidget);
 
       // Rebuild with G(!p), trace is [T], so G(!p) is false
-      await tester.pumpWidget(buildTestableWidget(stream: streamController.stream, formula: formulaAlwaysFalse));
+      await tester.pumpWidget(buildTestableWidget(
+          stream: streamController.stream, formula: formulaAlwaysFalse));
       await tester.pumpAndSettle(); // Ensure all frames/microtasks settle
       // Initial evaluation of G(!p) on empty trace (new checker) is true
       expect(find.byIcon(Icons.check_circle), findsOneWidget);

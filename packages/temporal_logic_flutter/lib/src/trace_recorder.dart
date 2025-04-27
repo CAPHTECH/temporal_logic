@@ -44,7 +44,8 @@ class TraceRecorder<T> {
   /// Set [recordDuplicates] to true to record every call, even if the state is the same.
   void record(T state, {bool recordDuplicates = false}) {
     if (_startTime == null) {
-      throw StateError('TraceRecorder must be initialized before recording. Call initialize().');
+      throw StateError(
+          'TraceRecorder must be initialized before recording. Call initialize().');
     }
     final now = _clock.now();
     final timestamp = now.difference(_startTime!);

@@ -4,19 +4,42 @@ library temporal_logic_flutter;
 
 // --- Core / MTL Exports (Re-exported for convenience) ---
 // Export necessary types/functions from core and mtl packages
-export 'package:temporal_logic_core/temporal_logic_core.dart' 
-  show 
-    Formula, Trace, TraceEvent, TimedValue, EvaluationResult, 
-    AtomicProposition, Not, And, Or, Implies, Next, Always, Eventually, Until,
-    WeakUntil, Release,
-    state, event, next, always, eventually, until, weakUntil, release,
-    LogicalConnectives;
+export 'package:temporal_logic_core/temporal_logic_core.dart'
+    show
+        Formula,
+        Trace,
+        TraceEvent,
+        TimedValue,
+        EvaluationResult,
+        AtomicProposition,
+        Not,
+        And,
+        Or,
+        Implies,
+        Next,
+        Always,
+        Eventually,
+        Until,
+        WeakUntil,
+        Release,
+        state,
+        event,
+        next,
+        always,
+        eventually,
+        until,
+        weakUntil,
+        release,
+        LogicalConnectives;
 
 export 'package:temporal_logic_mtl/temporal_logic_mtl.dart'
-  show 
-    TimeInterval, evaluateMtlTrace, 
-    EventuallyTimed, AlwaysTimed, UntilTimed;
-    // Also exports EvaluationResult, Trace, etc. implicitly from core export
+    show
+        TimeInterval,
+        evaluateMtlTrace,
+        EventuallyTimed,
+        AlwaysTimed,
+        UntilTimed;
+// Also exports EvaluationResult, Trace, etc. implicitly from core export
 
 // --- Flutter Specific Components ---
 

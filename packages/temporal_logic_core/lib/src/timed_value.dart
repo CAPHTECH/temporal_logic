@@ -38,7 +38,8 @@ class TimedValue<T> {
           timestamp == other.timestamp;
 
   @override
-  int get hashCode => Object.hash(value, timestamp); // Use Object.hash for better hash distribution
+  int get hashCode => Object.hash(
+      value, timestamp); // Use Object.hash for better hash distribution
 
   /// Provides a compact string representation, e.g., `(value @ 123ms)` or `(value @ 1.5s)`.
   @override
@@ -200,10 +201,12 @@ class Trace<T> {
   ///   Defaults to 1 millisecond. Must not be negative.
   ///
   /// Throws [ArgumentError] if [interval] is negative.
-  factory Trace.fromList(List<T> values, {Duration interval = const Duration(milliseconds: 1)}) {
+  factory Trace.fromList(List<T> values,
+      {Duration interval = const Duration(milliseconds: 1)}) {
     final traceEvents = <TraceEvent<T>>[];
     if (interval.isNegative) {
-      throw ArgumentError.value(interval, 'interval', 'Interval cannot be negative.');
+      throw ArgumentError.value(
+          interval, 'interval', 'Interval cannot be negative.');
     }
     for (int i = 0; i < values.length; i++) {
       traceEvents.add(TraceEvent(timestamp: interval * i, value: values[i]));

@@ -56,7 +56,8 @@ class MtlCheckerWidget<S> extends StatefulWidget {
   /// for failure).
   ///
   /// Defaults to displaying a simple [Icon] (check_circle for true, cancel for false) wrapped in a [Tooltip].
-  final Widget Function(BuildContext context, bool result, EvaluationResult details)? builder;
+  final Widget Function(
+      BuildContext context, bool result, EvaluationResult details)? builder;
 
   /// Creates an [MtlCheckerWidget].
   ///
@@ -78,7 +79,8 @@ class MtlCheckerWidget<S> extends StatefulWidget {
 class _MtlCheckerWidgetState<S> extends State<MtlCheckerWidget<S>> {
   late StreamMtlChecker<S> _checker;
   // Initialize with a placeholder state until the stream provides the first result.
-  EvaluationResult? _lastKnownResult = const EvaluationResult(false, reason: 'Initializing...');
+  EvaluationResult? _lastKnownResult =
+      const EvaluationResult(false, reason: 'Initializing...');
   StreamSubscription<EvaluationResult>? _resultSubscription;
 
   @override
@@ -111,7 +113,8 @@ class _MtlCheckerWidgetState<S> extends State<MtlCheckerWidget<S>> {
         if (mounted) {
           setState(() {
             // Update the result to reflect the error state.
-            _lastKnownResult = EvaluationResult(false, reason: 'Stream Error: $e');
+            _lastKnownResult =
+                EvaluationResult(false, reason: 'Stream Error: $e');
           });
         }
       },
@@ -146,10 +149,12 @@ class _MtlCheckerWidgetState<S> extends State<MtlCheckerWidget<S>> {
 
   /// The default builder used if [MtlCheckerWidget.builder] is not provided.
   /// Displays an icon (check or cancel) with a tooltip showing details.
-  Widget _defaultBuilder(BuildContext context, bool result, EvaluationResult details) {
+  Widget _defaultBuilder(
+      BuildContext context, bool result, EvaluationResult details) {
     return Tooltip(
       // Provide more details on hover (e.g., failure reason).
-      message: details.reason ?? (result ? 'Formula holds' : 'Formula does not hold'),
+      message: details.reason ??
+          (result ? 'Formula holds' : 'Formula does not hold'),
       child: Icon(
         result ? Icons.check_circle : Icons.cancel,
         color: result ? Colors.green : Colors.red,
@@ -173,7 +178,8 @@ class _MtlCheckerWidgetState<S> extends State<MtlCheckerWidget<S>> {
         // Extract the boolean result, defaulting to false if no result yet.
         final bool holds = evalResult?.holds ?? false;
         // Ensure we always have a non-null EvaluationResult for the builder.
-        final EvaluationResult details = evalResult ?? const EvaluationResult(false, reason: 'Waiting for stream...');
+        final EvaluationResult details = evalResult ??
+            const EvaluationResult(false, reason: 'Waiting for stream...');
 
         // Use the user-provided builder, or the default one.
         final builder = widget.builder ?? _defaultBuilder;

@@ -1,7 +1,8 @@
 name: temporal_logic_flutter
 description: Flutter integration (TraceRecorder, Matchers) for temporal logic.
-version: 0.0.1
-homepage: https://github.com/rizumita/temporal_logic_flutter/tree/main/packages/temporal_logic_flutter # Replace with actual path if hosted
+version: 0.1.0
+homepage: https://github.com/rizumita/temporal_logic/tree/main/packages/temporal_logic_flutter
+repository: https://github.com/rizumita/temporal_logic
 
 environment:
   sdk: ">=3.6.0 <4.0.0"
@@ -11,9 +12,9 @@ dependencies:
   flutter:
     sdk: flutter
   # Use path dependency to align with examples
-  temporal_logic_core: any
+  temporal_logic_core: ^0.1.0
   # Use path dependency for mtl as well if needed by this package
-  temporal_logic_mtl: any
+  temporal_logic_mtl: ^0.1.0
   collection: ^1.18.0
   clock: ^1.1.1 # Add clock package
 
@@ -24,5 +25,3 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
   lints: ^5.1.1 # Keep consistent with core
-
-resolution: workspace

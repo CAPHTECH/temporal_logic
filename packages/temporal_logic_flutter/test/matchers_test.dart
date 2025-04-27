@@ -16,8 +16,10 @@ void main() {
   group('satisfiesLtl Matcher', () {
     test('matches when formula holds for Trace', () {
       final trace = Trace<TestState>([
-        TraceEvent(value: TestState(true), timestamp: const Duration(seconds: 1)),
-        TraceEvent(value: TestState(true), timestamp: const Duration(seconds: 2)),
+        TraceEvent(
+            value: TestState(true), timestamp: const Duration(seconds: 1)),
+        TraceEvent(
+            value: TestState(true), timestamp: const Duration(seconds: 2)),
       ]);
       final formula = always(state<TestState>((s) => s.value));
 
@@ -26,8 +28,11 @@ void main() {
 
     test('does not match when formula fails for Trace', () {
       final trace = Trace<TestState>([
-        TraceEvent(value: TestState(true), timestamp: const Duration(seconds: 1)),
-        TraceEvent(value: TestState(false), timestamp: const Duration(seconds: 2)), // Fails here
+        TraceEvent(
+            value: TestState(true), timestamp: const Duration(seconds: 1)),
+        TraceEvent(
+            value: TestState(false),
+            timestamp: const Duration(seconds: 2)), // Fails here
       ]);
       final formula = always(state<TestState>((s) => s.value));
 
@@ -60,16 +65,20 @@ void main() {
       final matcher = satisfiesLtl(formula);
       final description = StringDescription();
       matcher.describe(description);
-      expect(description.toString(), contains('satisfies temporal logic formula'));
+      expect(
+          description.toString(), contains('satisfies temporal logic formula'));
       expect(description.toString(), contains('Eventually<TestState>'));
     });
 
     test('provides mismatch description on failure', () {
       final trace = Trace<TestState>([
-        TraceEvent(value: TestState(false), timestamp: const Duration(seconds: 1)),
-        TraceEvent(value: TestState(false), timestamp: const Duration(seconds: 2)),
+        TraceEvent(
+            value: TestState(false), timestamp: const Duration(seconds: 1)),
+        TraceEvent(
+            value: TestState(false), timestamp: const Duration(seconds: 2)),
       ]);
-      final formula = always(state<TestState>((s) => s.value)); // Expects true always
+      final formula =
+          always(state<TestState>((s) => s.value)); // Expects true always
       final matcher = satisfiesLtl(formula);
       final mismatchDescription = StringDescription();
       final matchState = <dynamic, dynamic>{};
@@ -78,7 +87,8 @@ void main() {
       expect(result, isFalse); // Evaluation should fail
 
       matcher.describeMismatch(trace, mismatchDescription, matchState, false);
-      expect(mismatchDescription.toString(), contains('evaluation resulted in false'));
+      expect(mismatchDescription.toString(),
+          contains('evaluation resulted in false'));
       expect(mismatchDescription.toString(), contains('Always failed'));
     });
 
@@ -94,13 +104,16 @@ void main() {
 
       expect(
         mismatchDescription.toString(),
-        contains('was type String but expected a Trace<TestState> or List<TestState>.'),
+        contains(
+            'was type String but expected a Trace<TestState> or List<TestState>.'),
       );
     });
 
     test('provides mismatch description on evaluation exception', () {
-      final trace = Trace<TestState>([]); // Empty trace might cause issues depending on formula/evaluator
-      final formula = next(state<TestState>((s) => s.value)); // `next` might fail on empty/short trace
+      final trace = Trace<TestState>(
+          []); // Empty trace might cause issues depending on formula/evaluator
+      final formula = next(state<TestState>(
+          (s) => s.value)); // `next` might fail on empty/short trace
       final matcher = satisfiesLtl(formula);
       final mismatchDescription = StringDescription();
       final matchState = <dynamic, dynamic>{};
@@ -111,8 +124,10 @@ void main() {
 
       // Check the mismatch description for the failure reason
       matcher.describeMismatch(trace, mismatchDescription, matchState, false);
-      expect(mismatchDescription.toString(), contains('evaluation resulted in false'));
-      expect(mismatchDescription.toString(), contains('Next evaluated past trace end.'));
+      expect(mismatchDescription.toString(),
+          contains('evaluation resulted in false'));
+      expect(mismatchDescription.toString(),
+          contains('Next evaluated past trace end.'));
     });
   });
 }

@@ -11,7 +11,8 @@ class StreamMtlChecker<S> {
   final Stream<TimedValue<S>> _stream;
   // Accept a full Formula<S> which can contain LTL and MTL operators
   final Formula<S> _formula;
-  final List<TraceEvent<S>> _internalTraceEvents = []; // Store TraceEvents directly
+  final List<TraceEvent<S>> _internalTraceEvents =
+      []; // Store TraceEvents directly
   final TimedValue<S>? _initialValue;
 
   StreamSubscription<TimedValue<S>>? _subscription;
@@ -35,7 +36,8 @@ class StreamMtlChecker<S> {
         _initialValue = initialValue {
     if (_initialValue != null) {
       // Convert initial TimedValue to TraceEvent
-      _internalTraceEvents.add(TraceEvent(timestamp: _initialValue.timestamp, value: _initialValue.value));
+      _internalTraceEvents.add(TraceEvent(
+          timestamp: _initialValue.timestamp, value: _initialValue.value));
     }
     // Evaluate the initial state based on _initialValue (if any)
     final initialResult = _evaluate();
@@ -54,7 +56,8 @@ class StreamMtlChecker<S> {
     _subscription = _stream.listen(
       (timedValue) {
         // Convert TimedValue to TraceEvent
-        _internalTraceEvents.add(TraceEvent(timestamp: timedValue.timestamp, value: timedValue.value));
+        _internalTraceEvents.add(TraceEvent(
+            timestamp: timedValue.timestamp, value: timedValue.value));
         // Simple approach: re-evaluate on every new event.
         _evaluateAndNotify();
       },

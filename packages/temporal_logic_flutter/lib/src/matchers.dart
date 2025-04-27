@@ -39,7 +39,7 @@ class _SatisfiesLtlMatcher<T> extends Matcher {
         return false;
       }
     } else if (item is List<T>) {
-       // Support plain lists as simple traces (index = time)
+      // Support plain lists as simple traces (index = time)
       try {
         final trace = Trace.fromList(item);
         final result = evaluateTrace<T>(trace, formula);
@@ -60,7 +60,9 @@ class _SatisfiesLtlMatcher<T> extends Matcher {
 
   @override
   Description describe(Description description) {
-    return description.add('satisfies temporal logic formula\n  Formula: ').addDescriptionOf(formula);
+    return description
+        .add('satisfies temporal logic formula\n  Formula: ')
+        .addDescriptionOf(formula);
   }
 
   @override
@@ -71,7 +73,7 @@ class _SatisfiesLtlMatcher<T> extends Matcher {
     bool verbose,
   ) {
     if (matchState.containsKey('exception')) {
-       mismatchDescription
+      mismatchDescription
           .add('threw an exception during evaluation:\n')
           .addDescriptionOf(matchState['exception'])
           .add('\nStack trace:\n')
@@ -81,11 +83,12 @@ class _SatisfiesLtlMatcher<T> extends Matcher {
       mismatchDescription
           .add('evaluation resulted in ${result.holds ? 'true' : 'false'}\n');
       if (!result.holds && result.reason != null) {
-         mismatchDescription.add('Reason: ${result.reason}\n');
+        mismatchDescription.add('Reason: ${result.reason}\n');
       }
       if (verbose && matchState.containsKey('traceLength')) {
-         mismatchDescription.add('Evaluated on trace of length ${matchState['traceLength']}.\n');
-         // Potentially add more trace details if EvaluationResult provides them
+        mismatchDescription.add(
+            'Evaluated on trace of length ${matchState['traceLength']}.\n');
+        // Potentially add more trace details if EvaluationResult provides them
       }
     } else if (matchState.containsKey('itemType')) {
       mismatchDescription
@@ -93,8 +96,8 @@ class _SatisfiesLtlMatcher<T> extends Matcher {
           .add(matchState['itemType'])
           .add(' but expected a Trace<$T> or List<$T>.');
     } else {
-       mismatchDescription.add('did not match for an unknown reason.');
+      mismatchDescription.add('did not match for an unknown reason.');
     }
     return mismatchDescription;
   }
-} 
+}

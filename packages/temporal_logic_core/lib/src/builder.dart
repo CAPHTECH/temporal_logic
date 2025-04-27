@@ -4,7 +4,8 @@ import 'ast.dart';
 
 /// Creates an atomic proposition based on a state predicate.
 /// Alias for constructing an [AtomicProposition] formula.
-AtomicProposition<T> state<T>(bool Function(T state) pred, {String? name}) => AtomicProposition<T>(pred, name: name);
+AtomicProposition<T> state<T>(bool Function(T state) pred, {String? name}) =>
+    AtomicProposition<T>(pred, name: name);
 
 /// Creates an atomic proposition [Formula] based on an event predicate.
 ///
@@ -12,7 +13,8 @@ AtomicProposition<T> state<T>(bool Function(T state) pred, {String? name}) => At
 /// by signaling that the predicate relates to an event occurring *at* this state/time,
 /// rather than a condition holding *over* a state. Both create an [AtomicProposition].
 /// Example: `event<MyEvents>((e) => e == MyEvents.buttonClicked)`
-AtomicProposition<T> event<T>(bool Function(T stateOrEvent) predicate, {String? name}) {
+AtomicProposition<T> event<T>(bool Function(T stateOrEvent) predicate,
+    {String? name}) {
   // Semantically, an event check is just a state check at a specific time.
   return AtomicProposition<T>(predicate, name: name);
 }

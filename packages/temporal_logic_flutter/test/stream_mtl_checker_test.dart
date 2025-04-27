@@ -4,7 +4,8 @@ import 'package:fake_async/fake_async.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:temporal_logic_core/temporal_logic_core.dart' as tlCore;
 import 'package:temporal_logic_flutter/src/stream_mtl_checker.dart';
-import 'package:temporal_logic_flutter/temporal_logic_flutter.dart' as tlFlutter;
+import 'package:temporal_logic_flutter/temporal_logic_flutter.dart'
+    as tlFlutter;
 import 'package:temporal_logic_mtl/temporal_logic_mtl.dart' as tlMtl;
 
 // Simple enum state for testing
@@ -28,10 +29,12 @@ void main() {
 
     // Helper to check emitted results (checks only 'holds' status for simplicity)
     Matcher emitsHoldStatus(List<bool> expectedHolds) {
-      return emitsInOrder(
-          expectedHolds.map((holds) => predicate<tlCore.EvaluationResult>((r) => r.holds == holds)).toList()
-            // Add emitsDone check when using fake_async for stricter checks
-            ..add(emitsDone));
+      return emitsInOrder(expectedHolds
+          .map((holds) =>
+              predicate<tlCore.EvaluationResult>((r) => r.holds == holds))
+          .toList()
+        // Add emitsDone check when using fake_async for stricter checks
+        ..add(emitsDone));
     }
 
     test('F_[0, 100] target - holds with initial value', () {
@@ -43,7 +46,8 @@ void main() {
         final checker = StreamMtlChecker<TestState>(
           controller.stream,
           formula: formula,
-          initialValue: tv(TestState.target, 50), // Initial value within interval
+          initialValue:
+              tv(TestState.target, 50), // Initial value within interval
         );
 
         expectLater(checker.resultStream, emitsHoldStatus([true]));
@@ -57,7 +61,8 @@ void main() {
       fakeAsync((async) {
         final formula = tlMtl.EventuallyTimed(
           tlFlutter.state<TestState>((s) => s == TestState.target),
-          tlMtl.TimeInterval(const Duration(milliseconds: 50), const Duration(milliseconds: 150)),
+          tlMtl.TimeInterval(const Duration(milliseconds: 50),
+              const Duration(milliseconds: 150)),
         );
         final checker = StreamMtlChecker<TestState>(
           controller.stream,
@@ -65,7 +70,8 @@ void main() {
           initialValue: tv(TestState.initial, 0),
         );
 
-        expectLater(checker.resultStream, emitsHoldStatus([false, false, true]));
+        expectLater(
+            checker.resultStream, emitsHoldStatus([false, false, true]));
 
         async.elapse(const Duration(milliseconds: 10));
         controller.add(tv(TestState.other, 10)); // Doesn't satisfy yet
@@ -84,7 +90,8 @@ void main() {
       fakeAsync((async) {
         final formula = tlMtl.EventuallyTimed(
           tlFlutter.state<TestState>((s) => s == TestState.target),
-          tlMtl.TimeInterval(const Duration(milliseconds: 50), const Duration(milliseconds: 150)),
+          tlMtl.TimeInterval(const Duration(milliseconds: 50),
+              const Duration(milliseconds: 150)),
         );
         final checker = StreamMtlChecker<TestState>(
           controller.stream,
@@ -93,7 +100,8 @@ void main() {
         );
 
         // Expect initial false, then false again after 'other', then false after late 'target'
-        expectLater(checker.resultStream, emitsHoldStatus([false, false, false]));
+        expectLater(
+            checker.resultStream, emitsHoldStatus([false, false, false]));
 
         async.elapse(const Duration(milliseconds: 10));
         controller.add(tv(TestState.other, 10));

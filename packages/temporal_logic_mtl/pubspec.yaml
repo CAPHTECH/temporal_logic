@@ -1,14 +1,15 @@
 name: temporal_logic_mtl
 description: Metric Temporal Logic (MTL) extensions for temporal_logic_core.
-version: 0.0.1
-homepage: https://github.com/rizumita/temporal_logic_flutter/tree/main/packages/temporal_logic_mtl # Replace with actual path if hosted
+version: 0.1.0
+homepage: https://github.com/rizumita/temporal_logic/tree/main/packages/temporal_logic_mtl
+repository: https://github.com/rizumita/temporal_logic
 
 environment:
   sdk: ">=3.6.0 <4.0.0"
 
 dependencies:
   # Use path dependency to align with examples
-  temporal_logic_core: any
+  temporal_logic_core: ^0.1.0
   # test: ^1.24.0 # Moved to dev_dependencies
 
 # Add other dependencies here if needed
@@ -17,5 +18,3 @@ dependencies:
 dev_dependencies:
   lints: ^5.1.1 # Align with temporal_logic_flutter
   test: ^1.24.0 # Test framework
-
-resolution: workspace

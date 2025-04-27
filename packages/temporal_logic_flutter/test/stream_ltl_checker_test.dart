@@ -19,7 +19,8 @@ void main() {
     late StreamLtlChecker<TestState> checker;
 
     // Helper to create an AtomicProposition for checking state.p
-    Formula<TestState> pIs(bool value) => AtomicProposition<TestState>((s) => s.p == value, name: 'p==$value');
+    Formula<TestState> pIs(bool value) =>
+        AtomicProposition<TestState>((s) => s.p == value, name: 'p==$value');
 
     setUp(() {
       controller = StreamController<TestState>();
@@ -34,7 +35,9 @@ void main() {
       }
     });
 
-    test('emits initial false evaluation immediately if stream empty and no initialValue', () {
+    test(
+        'emits initial false evaluation immediately if stream empty and no initialValue',
+        () {
       fakeAsync((async) {
         formula = pIs(true); // Check if p is true
         checker = StreamLtlChecker<TestState>(
@@ -47,7 +50,8 @@ void main() {
         // Process microtasks to allow initial emission
         async.flushMicrotasks();
 
-        expect(results, [false], reason: "Initial check on empty trace should be false");
+        expect(results, [false],
+            reason: "Initial check on empty trace should be false");
 
         sub.cancel();
       });
@@ -67,14 +71,16 @@ void main() {
         // Process microtasks to allow initial emission
         async.flushMicrotasks();
 
-        expect(results, [true], reason: "Initial check with initialValue(p=true) should be true");
+        expect(results, [true],
+            reason: "Initial check with initialValue(p=true) should be true");
 
         // Add a new state where p is false
         controller.add(TestState(false));
         async.flushMicrotasks();
 
         // Formula pIs(true) on trace [T, F] is false
-        expect(results, [true, false], reason: "After adding F, pIs(true) becomes false");
+        expect(results, [true, false],
+            reason: "After adding F, pIs(true) becomes false");
 
         sub.cancel();
       });
@@ -108,7 +114,8 @@ void main() {
         controller.add(state2);
         async.flushMicrotasks(); // Process the stream event
         // F p on [F, T] is true. Should emit true.
-        expect(results, [false, false, true], reason: "After T, F p becomes true");
+        expect(results, [false, false, true],
+            reason: "After T, F p becomes true");
 
         sub.cancel();
       });
@@ -166,7 +173,9 @@ void main() {
 
         // Initial check
         async.flushMicrotasks();
-        expect(results, [true], reason: "Initial check G(p) on empty trace should be vacuously true");
+        expect(results, [true],
+            reason:
+                "Initial check G(p) on empty trace should be vacuously true");
 
         // Add first true state
         controller.add(TestState(true));
@@ -178,13 +187,15 @@ void main() {
         controller.add(TestState(true));
         async.flushMicrotasks(); // Process stream event
         // G(p=T) starting at index 1 on trace [T, T] is true.
-        expect(results, [true, true, true], reason: "After T, T, G(T) stays true");
+        expect(results, [true, true, true],
+            reason: "After T, T, G(T) stays true");
 
         // Add false state
         controller.add(TestState(false));
         async.flushMicrotasks(); // Process stream event
         // G(p=T) starting at index 2 on trace [T, T, F] is false.
-        expect(results, [true, true, true, false], reason: "After T, T, F, G(T) becomes false");
+        expect(results, [true, true, true, false],
+            reason: "After T, T, F, G(T) becomes false");
 
         sub.cancel();
       });
