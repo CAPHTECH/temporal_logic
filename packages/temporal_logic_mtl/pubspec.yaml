@@ -7,7 +7,8 @@ environment:
   sdk: ">=3.6.0 <4.0.0"
 
 dependencies:
-  temporal_logic_core: any # Resolved via workspace
+  # Use path dependency to align with examples
+  temporal_logic_core: any
   # test: ^1.24.0 # Moved to dev_dependencies
 
 # Add other dependencies here if needed

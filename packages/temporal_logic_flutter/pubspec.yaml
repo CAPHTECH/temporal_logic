@@ -10,8 +10,10 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  temporal_logic_core: any # Resolved via workspace
-  temporal_logic_mtl: any # Resolved via workspace
+  # Use path dependency to align with examples
+  temporal_logic_core: any
+  # Use path dependency for mtl as well if needed by this package
+  temporal_logic_mtl: any
   collection: ^1.18.0
   clock: ^1.1.1 # Add clock package
 

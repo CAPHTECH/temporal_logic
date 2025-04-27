@@ -141,6 +141,7 @@ print('Specification "$spec" holds on trace: $result'); // Expected output depen
 
 * **`examples/counter_ltl`**: A simple Flutter counter example demonstrating Linear Temporal Logic (LTL) concepts (or intended to).
 * **`examples/snackbar_mtl`**: A Flutter example showcasing the use of Metric Temporal Logic (MTL) for specifying behavior related to Snackbars.
+* **`examples/login_flow_ltl`**: Demonstrates using LTL to verify a multi-step login flow, including detecting transient state bugs (like UI flicker) that standard tests might miss.
 
 ## Getting Started
 
