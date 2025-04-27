@@ -1,8 +1,8 @@
 name: temporal_logic_core
 description: Core LTL/MTL AST, evaluator, and builder DSL for Dart.
 version: 0.1.0
-homepage: https://github.com/rizumita/temporal_logic/tree/main/packages/temporal_logic_core
-repository: https://github.com/rizumita/temporal_logic
+homepage: https://github.com/CAPHTECH/temporal_logic/tree/main/packages/temporal_logic_core
+repository: https://github.com/CAPHTECH/temporal_logic
 
 environment:
   sdk: ">=3.6.0 <4.0.0"
