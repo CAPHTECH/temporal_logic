@@ -1,4 +1,4 @@
-# フラッターとダート用の時相論理パッケージ - 詳細なドキュメント
+# Flutter/Dartの時相論理パッケージ - 詳細なドキュメント
 
 `temporal_logic_core`、`temporal_logic_mtl`、および`temporal_logic_flutter` パッケージの詳細なドキュメントへようこそ。このガイドでは、Dart と Flutter アプリケーションの動作を指定し検証するために時相論理を使用する際の概念、API、およびベストプラクティスについて、包括的な理解を提供することを目的としています。特に、複雑な状態遷移やタイミング要件を持つアプリケーションに焦点を当てています。
 
@@ -6,43 +6,43 @@
 
 **目次：**
 
-- ［Flutter & Dart 用時制論理パッケージ - 詳細ドキュメント］(#temporal-logic-packages-for-flutter--dart---detailed-documentation)
-- ［1. 概要］(#1-introduction)
-  - ［なぜ時相論理か？］(#why-temporal-logic)
-- ［パッケージの概要］(#package-overview)
-- ［最初のLTLテスト(ログインフロー例)］(#your-first-ltl-test-login-flow-example)
-- ［3. 基本概念］(#3-core-concepts)
-  - ［トレースとタイムスタンプ］(#traces-and-timestamps)
-- ［状態スナップショット (`AppSnap`)］(#state-snapshots-appsnap)
-- ［命題： `state` vs `event`］(#propositions-state-vs-event)
-- ［線形時相論理 (LTL) の基礎］(#linear-temporal-logic-ltl-basics)
-  - ［メトリック時相論理 (MTL) の基礎］(#metric-temporal-logic-mtl-basics)
-- ［4. API リファレンス］(#4-api-reference)
-- ［`temporal_logic_core` API］(#temporal_logic_core-api)
-- ［式］(#formula)
-- ［原子命題］(#atomicproposition)
-      - ［論理演算子 (`and`， `or`， `not`， `implies`)］(#logical-operators-and-or-not-implies)
-- ［LTL 演算子 (`next`， `always`， `eventually`， `until`， `release`)］(#ltl-operators-next-always-eventually-until-release)
-      - ［補助関数 (`state`， `event`)］(#helper-functions-state-event)
-- ［`temporal_logic_mtl` API］(#temporal_logic_mtl-api)
-- ［TimeInterval］(#timeinterval)
-      - ［タイムド演算子 (`alwaysTimed`， `eventuallyTimed`)］(#timed-operators-alwaystimed-eventuallytimed)
-- ［評価 (`evaluateMtlTrace`)］(#evaluation-evaluatemtltrace)
-- ［`temporal_logic_flutter` API］(#temporal_logic_flutter-api)
-      - ［トレースレコーダー］(#tracerecorder)
-- ［マッチャー (`satisfiesLtl`)］(#matchers-satisfiesltl)
-- ［5. クックブック & ベストプラクティス］(#5-cookbook--best-practices)
-  - ［状態管理との統合 (Riverpod 例)］(#integrating-with-state-management-riverpod-example)
-- ［効果的な `AppSnap` タイプの設計］(#designing-effective-appsnap-types)
-- ［一般的な LTL/MTL パターン］(#common-ltlmtl-patterns)
-- ［非同期操作のテスト］(#testing-asynchronous-operations)
-  - ［一時的なイベントの処理 (`loginClicked`)］(#handling-transient-events-loginclicked)
-  - ［パフォーマンスの考慮事項］(#performance-considerations)
-- ［6. 追加の例］(#6-more-examples)
-- ［フォーム検証フロー］(#form-validation-flow)
-- ［アニメーションシーケンスの検証］(#animation-sequence-verification)
-- ［ネットワークリクエストのライフサイクル］(#network-request-lifecycle)
-  - ［7. トラブルシューティング］(#7-troubleshooting)
+- [Flutter/Dartの時相論理パッケージ - 詳細なドキュメント](#flutterdartの時相論理パッケージ---詳細なドキュメント)
+  - [1. 導入](#1-導入)
+    - [なぜ時相論理か？](#なぜ時相論理か)
+    - [パッケージ概要](#パッケージ概要)
+    - [初めての LTL テスト(ログインフロー例)](#初めての-ltl-テストログインフロー例)
+  - [3. 基本概念](#3-基本概念)
+    - [トレースとタイムスタンプ](#トレースとタイムスタンプ)
+    - [状態のスナップショット(`AppSnap`)](#状態のスナップショットappsnap)
+    - [命題： `state` vs `event`](#命題-state-vs-event)
+    - [線形時制論理 (LTL) の基礎](#線形時制論理-ltl-の基礎)
+    - [メトリック時制論理(MTL)の基本](#メトリック時制論理mtlの基本)
+  - [4. API リファレンス](#4-api-リファレンス)
+    - [`temporal_logic_core` API](#temporal_logic_core-api)
+      - [Formula](#formula)
+      - [AtomicProposition](#atomicproposition)
+      - [論理演算子(`and`， `or`， `not`， `implies`)](#論理演算子and-or-not-implies)
+      - [LTL 演算子 (`next`， `always`， `eventually`， `until`， `release`)](#ltl-演算子-next-always-eventually-until-release)
+      - [ヘルパー関数(`state`， `event`)](#ヘルパー関数state-event)
+    - [`temporal_logic_mtl` API](#temporal_logic_mtl-api)
+      - [TimeInterval](#timeinterval)
+      - [タイムド演算子 (`alwaysTimed`， `eventuallyTimed`)](#タイムド演算子-alwaystimed-eventuallytimed)
+      - [評価 (`evaluateMtlTrace`)](#評価-evaluatemtltrace)
+    - [`temporal_logic_flutter` API](#temporal_logic_flutter-api)
+      - [TraceRecorder](#tracerecorder)
+      - [マッチャー (`satisfiesLtl`)](#マッチャー-satisfiesltl)
+  - [5. クックブック \& ベストプラクティス](#5-クックブック--ベストプラクティス)
+    - [状態管理との統合 (Riverpod 例)](#状態管理との統合-riverpod-例)
+    - [効果的な `AppSnap` タイプの設計](#効果的な-appsnap-タイプの設計)
+    - [一般的な LTL/MTL パターン](#一般的な-ltlmtl-パターン)
+    - [非同期操作のテスト](#非同期操作のテスト)
+    - [一時的なイベントの処理 (`loginClicked`)](#一時的なイベントの処理-loginclicked)
+    - [パフォーマンスに関する考慮事項](#パフォーマンスに関する考慮事項)
+  - [6. 追加の例](#6-追加の例)
+    - [フォーム検証フロー](#フォーム検証フロー)
+    - [アニメーションシーケンス検証](#アニメーションシーケンス検証)
+    - [ネットワークリクエストライフサイクル](#ネットワークリクエストライフサイクル)
+  - [7. トラブルシューティング](#7-トラブルシューティング)
 
 ---
 
@@ -237,8 +237,8 @@ LTLは、トレース内の状態の線形シーケンスに沿って性質を�
 MTL は LTL に明示的な時間制約を時制演算子に追加し、物事が*どのくらいの時間*かかるかを推論できるようにします。`temporal_logic_mtl` によって提供されます。
 
 - **`TimeInterval(Duration start， Duration end， ｛bool startInclusive， bool endInclusive｝)`**： 現在の状態のタイムスタンプを基準とした正確な時間窓を定義します。
-- **`alwaysTimed(formula， TimeInterval interval)` (G［a，b］)**： 「`formula` は、現在の時刻から指定された `interval` 内のタイムスタンプを持つすべての将来の状態において真でなければならない。」(例：「次の5秒間、エラーフラグはfalseでなければならない」)
-- **`eventuallyTimed(formula， TimeInterval interval)` (F［a，b］)**： 「`formula` は、現在の時刻から指定された `interval` 内のタイムスタンプを持つ将来の状態で真になる必要があります。」 (例： 「2秒以内に成功メッセージが表示される必要があります」)。
+- **`alwaysTimed(formula， TimeInterval interval)` (G[a，b])**： 「`formula` は、現在の時刻から指定された `interval` 内のタイムスタンプを持つすべての将来の状態において真でなければならない。」(例：「次の5秒間、エラーフラグはfalseでなければならない」)
+- **`eventuallyTimed(formula， TimeInterval interval)` (F[a，b])**： 「`formula` は、現在の時刻から指定された `interval` 内のタイムスタンプを持つ将来の状態で真になる必要があります。」 (例： 「2秒以内に成功メッセージが表示される必要があります」)。
 - 評価には意味のあるタイムスタンプを持つ`Trace`(通常は`TraceRecorder`によって自動的に処理される)が必要であり、`evaluateMtlTrace`関数を使用します。
 
 ## 4. API リファレンス
@@ -338,10 +338,10 @@ MTL は LTL に明示的な時間制約を時制演算子に追加し、物事�
 - **`end`**： 区間の終了 `Duration`(現在の時刻に対する相対位置)。
   - **`startInclusive`**： `start` と等しいタイムスタンプがインターバルに含まれるかどうか。デフォルトは `true`。
   - **`endInclusive`**： `end` と等しいタイムスタンプが間隔に含まれるかどうか。デフォルトは `false`。
-- **解釈： 間隔 `［start， end)` (デフォルト) は、時間 `t` が `start <= t < end` を満たすことを意味します。`endInclusive` が true の場合、`start <= t <= end` になります。
+- **解釈： 間隔 `[start， end)` (デフォルト) は、時間 `t` が `start <= t < end` を満たすことを意味します。`endInclusive` が true の場合、`start <= t <= end` になります。
 - **例：
-  - `TimeInterval(Duration.zero， Duration(seconds： 5))` は `［0s， 5s)` を表します - 現在の時刻から5秒後まで(ただし5秒は含まれません)。
-  - `TimeInterval(Duration(seconds： 2)， Duration(seconds： 10)， endInclusive： true)` は `［2s， 10s］` を表します - 2秒から10秒まで(10秒を含む)。
+  - `TimeInterval(Duration.zero， Duration(seconds： 5))` は `[0s， 5s)` を表します - 現在の時刻から5秒後まで(ただし5秒は含まれません)。
+  - `TimeInterval(Duration(seconds： 2)， Duration(seconds： 10)， endInclusive： true)` は `[2s， 10s]` を表します - 2秒から10秒まで(10秒を含む)。
   - `TimeInterval(Duration(seconds： 1)， Duration(seconds： 1))` は単一の瞬間 `t = 1s` を表します(`startInclusive` が true で、`endInclusive` がデフォルトで false であるため)。
 
 #### タイムド演算子 (`alwaysTimed`， `eventuallyTimed`)
@@ -349,12 +349,12 @@ MTL は LTL に明示的な時間制約を時制演算子に追加し、物事�
 これらの演算子は、LTL の対応する演算子(`always`、`eventually`)に `TimeInterval` 制約を追加して拡張します。
 
 - **`formula.alwaysTimed(interval)`** または `tlMtl.alwaysTimed(formula， interval)`：
-- **シンボル：** G［`interval`］ `formula`(例： G［0， 5s］ `formula`)
+- **シンボル：** G[`interval`] `formula`(例： G[0， 5s] `formula`)
   - **意味論： `formula` は、トレース内のタイムスタンプ `t_future` が `t_current + interval.start <= t_future < t_current + interval.end` を満たすすべての未来の状態において真でなければなりません(`interval` のフラグに基づいて包含性を調整します)。インターバル内に状態が存在しない場合、オペレーターは空虚に真です。
   - **例：** `dataFetched.implies(loadingIndicatorVisible.not().alwaysTimed(TimeInterval(Duration.zero， Duration(seconds： 1))))` (データが取得された場合、取得後 0 秒から 1 秒までのインターバル全体において、ローディングインジケーターは *表示されてはならない*)。
 
 - **`formula.eventuallyTimed(interval)`** または `tlMtl.eventuallyTimed(formula， interval)`：
-- **シンボル：** F［`interval`］ `formula` (例： F［2s， 5s］ `formula`)
+- **シンボル：** F[`interval`] `formula` (例： F[2s， 5s] `formula`)
   - **意味： `formula` は、トレース内のタイムスタンプ `t_future` が `t_current + interval.start <= t_future < t_current + interval.end` を満たす *少なくとも1つの* 将来の状態において真でなければならない(包含性を考慮して調整)。インターバル内の状態が式を満たさない場合、またはインターバル内に状態が存在しない場合、オペレーターは偽となる。
   - **例：** `requestSent.implies(responseReceived.eventuallyTimed(TimeInterval(Duration.zero， Duration(seconds： 3))))` (リクエストが送信された場合、3秒以内にレスポンスが受信されなければならない)。
 
@@ -635,7 +635,7 @@ class AppSnap extends Equatable {
 - **Timed Response (MTL)： "`request`が発生した場合、`response`は特定の時間間隔(例： 5秒)以内に発生しなければならない。」
   - **意味： 基本のレスポンスパターンにリアルタイム制約を追加します。
 - **式： `tlCore.always(request.implies(response.eventuallyTimed(TimeInterval(Duration.zero， Duration(seconds： 5)))))`
-- **MTL： `G(request -> F［0s， 5s］ response)`
+- **MTL： `G(request -> F[0s， 5s] response)`
   - **使用例： パフォーマンス要件のテスト、タイムアウト、指定された期間内に完了するアニメーション、ユーザーフィードバックの即時表示。
 
 - **フラッカーなし / フェーズ中の安定性： 「特定のフェーズ条件(`loading`)が真である間、望ましくない一時的な条件(`error`)は決して真になってはならない。」
@@ -761,7 +761,7 @@ final loginClicked = tlCore.event<AppSnap>(
 final formula = tlCore.always(loginClicked.implies(tlCore.next(isLoading)));
 ```
 
-**なぜこれが機能する：** このテクニックは、テストフロー内でイベントが論理的に発生したとみなされる正確なポイントに一意のマーカーをトレースに挿入します。これにより、`X` (Next) のような時制演算子や、F［0， ...］ (Eventually within 0 seconds...) のようなタイムド演算子が、イベントトリガー直後の状態を正確に推論できるようになります。
+**なぜこれが機能する：** このテクニックは、テストフロー内でイベントが論理的に発生したとみなされる正確なポイントに一意のマーカーをトレースに挿入します。これにより、`X` (Next) のような時制演算子や、F[0， ...] (Eventually within 0 seconds...) のようなタイムド演算子が、イベントトリガー直後の状態を正確に推論できるようになります。
 
 ### パフォーマンスに関する考慮事項
 
@@ -815,7 +815,7 @@ final formula = tlCore.always(loginClicked.implies(tlCore.next(isLoading)));
 - **検証対象の時間的性質：**
 - 「アニメーションが開始された場合(`animationStart`)、最終的に終了状態(`animationEnd`)に達しなければならない。」 (生存性： `G(animationStart -> F(animationEnd))`)
   - 「アニメーションのフェーズ2 (`phase2Active`) は、フェーズ1 (`phase1Active`) が終了するまで開始されない (`phase1Finished`)。」 (順序： `G(phase2Active -> X(！phase1Active.until(phase1Finished)))` - 簡略化)
-  - 「アニメーション全体は500ミリ秒以内に完了する必要があります。」 (タイムドライブネス： `G(animationStart -> F［0ms， 500ms］(animationEnd))`)
+  - 「アニメーション全体は500ミリ秒以内に完了する必要があります。」 (タイムドライブネス： `G(animationStart -> F[0ms， 500ms](animationEnd))`)
 - 「要素A (`elementAPositioned`) はアニメーション終了後、最終位置に保持されます。」 (安定性： `G(animationEnd -> G(elementAPositioned))`)
 
 ### ネットワークリクエストライフサイクル
@@ -839,7 +839,7 @@ final formula = tlCore.always(loginClicked.implies(tlCore.next(isLoading)));
     - **述語論理：** `state`/`event` 内の述語関数 `(s) => ...` が、`AppSnap` フィールドに基づいて条件を正しく反映していますか？述語内にプリント文を追加するか、別でテストしてください。
 - **`AppSnap` マッピング：** `AppSnap.fromAppState` ファクトリが、実際のアプリケーション状態を命題で使用される`AppSnap` フィールドに正しくマッピングしていますか？このマッピング論理を確認してください。
   - **式論理の確認：**
-- **演算子の意味論： LTL/MTL演算子(X， G， F， U， R， G［］， F［］)の理解を再確認してください。表現したい性質に適切な演算子を使用していますか？セクション3および4を参照してください。
+- **演算子の意味論： LTL/MTL演算子(X， G， F， U， R， G[]， F[])の理解を再確認してください。表現したい性質に適切な演算子を使用していますか？セクション3および4を参照してください。
   - **演算子の優先順位/グループ化：** 論理演算子(`and`， `or`， `implies`)と時制演算子が意図した通りに結合されるように、括弧 `()` を使用してください。`A.implies(B.and(C))` は `A.implies(B).and(C)` と異なり、`A.implies(B.or(C))` は `A.implies(B).or(C)` と異なります。
 - **簡素化：** 複雑な式の一部を一時的にコメントアウトして、どの部分式が失敗しているかを特定してください。
   - **可視化/シミュレーション：** 複雑なLTLの場合、状態シーケンスを紙にスケッチするか、オンラインのLTL可視化ツール/モデルチェッカー(抽象命題名を使用)を使用して、異なるシナリオでの式挙動を確認します。
