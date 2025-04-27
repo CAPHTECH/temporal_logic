@@ -109,7 +109,7 @@ void main() {
 
     test('LTL Temporal Operators (Next, Eventually, Always)', () {
       final p1_at_1 = state<int>((s) => s == 1);
-      final p2_at_2 = state<int>((s) => s == 2);
+      // final p2_at_2 = state<int>((s) => s == 2);
       expect(evalM(trace, Next(p1_at_1)).holds, isTrue); // X(s==1) at index 0 -> check index 1
       expect(evalM(trace, Next(p0)).holds, isFalse); // X(s==0) at index 0 -> check index 1
       expect(evalM(trace, Eventually(p1)).holds, isTrue); // F(s==1)

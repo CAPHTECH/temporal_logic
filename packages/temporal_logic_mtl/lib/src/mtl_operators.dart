@@ -294,7 +294,6 @@ EvaluationResult _evaluateRecursive<T>(Trace<T> trace, Formula<T> formula, int i
       if (index >= trace.length) return const EvaluationResult.success(); // G_I phi is vacuously true on empty suffix
 
       final startTime = trace.events[index].timestamp;
-      bool relevantPointChecked = false;
 
       for (var k = index; k < trace.length; k++) {
         final currentEvent = trace.events[k];
@@ -302,7 +301,6 @@ EvaluationResult _evaluateRecursive<T>(Trace<T> trace, Formula<T> formula, int i
 
         // Only evaluate operand if time k is within the interval
         if (interval.contains(timeOffset)) {
-          relevantPointChecked = true;
           final stepResult = _evaluateRecursive(trace, f.operand, k);
           if (!stepResult.holds) {
             // Found a violation within the interval
@@ -428,8 +426,6 @@ bool checkAlwaysWithin<S>(
   }
   final startTime = trace.events.first.timestamp;
 
-  bool relevantPointChecked = false; // Track if any point in interval was checked
-
   for (int i = 0; i < trace.length; i++) {
     final currentEvent = trace.events[i]; // Use TraceEvent
     final currentTime = currentEvent.timestamp;
@@ -440,7 +436,6 @@ bool checkAlwaysWithin<S>(
     final isInInterval = interval.contains(timeOffset);
 
     if (isInInterval) {
-      relevantPointChecked = true; // Mark that we checked at least one point
       final operandResult = operand.predicate(currentValue);
       if (!operandResult) {
         return false; // Found a time point violating the operand within the interval
