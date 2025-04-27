@@ -73,3 +73,6 @@ macos/Flutter/Generated.xcconfig
 *.project
 *.classpath
 nbproject/ 
+
+# FVM Version Cache
+.fvm/

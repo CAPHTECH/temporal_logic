@@ -12,13 +12,15 @@ dependencies:
     sdk: flutter
   temporal_logic_core: any # Resolved via workspace
   temporal_logic_mtl: any # Resolved via workspace
+  collection: ^1.18.0
+  clock: ^1.1.1 # Add clock package
 
 # Add other dependencies here
 
 # Add dev dependencies here, e.g.:
-# dev_dependencies:
-#   flutter_test:
-#     sdk: flutter
-#   lints: ^3.0.0
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  lints: ^5.1.1 # Keep consistent with core
 
 resolution: workspace

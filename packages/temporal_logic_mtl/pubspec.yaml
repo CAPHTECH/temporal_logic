@@ -8,12 +8,13 @@ environment:
 
 dependencies:
   temporal_logic_core: any # Resolved via workspace
+  # test: ^1.24.0 # Moved to dev_dependencies
 
 # Add other dependencies here if needed
 
 # Add dev dependencies here, e.g.:
-# dev_dependencies:
-#   test: ^1.24.0
-#   lints: ^3.0.0
+dev_dependencies:
+  lints: ^5.1.1 # Align with temporal_logic_flutter
+  test: ^1.24.0 # Test framework
 
 resolution: workspace
