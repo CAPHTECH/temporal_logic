@@ -45,7 +45,7 @@ void main() {
     });
 
     test('Trace constructor allows monotonic timestamps', () {
-      expect(() => Trace([v1, v0]), throwsA(isA<AssertionError>())); // Assuming core Trace asserts
+      expect(() => Trace([v1, v0]), throwsA(isA<ArgumentError>())); // Check for ArgumentError from core
       expect(() => Trace([v0, v1]), returnsNormally);
     });
   });

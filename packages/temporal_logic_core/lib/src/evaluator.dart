@@ -3,24 +3,65 @@ import 'package:meta/meta.dart';
 import 'ast.dart';
 import 'timed_value.dart';
 
-/// Represents the result of evaluating a temporal logic formula on a trace.
+/// Represents the outcome of evaluating a [Formula] against a [Trace].
+///
+/// This class encapsulates the result of checking if a temporal logic formula
+/// holds true for a given sequence of timed events.
+///
+/// It contains not only whether the formula [holds] but also optional diagnostic
+/// information like a failure [reason] and the specific time ([relatedTimestamp])
+/// or index ([relatedIndex]) within the trace that is most pertinent to the result,
+/// especially in case of failure.
+///
+/// This class is immutable.
 @immutable
 class EvaluationResult {
-  /// Whether the formula holds true for the trace.
+  /// `true` if the formula holds for the trace (or sub-trace beginning at the
+  /// evaluated start index), `false` otherwise.
   final bool holds;
 
-  /// An optional explanation or reason, particularly useful when [holds] is false.
+  /// An optional human-readable explanation for the evaluation outcome.
+  ///
+  /// This is particularly useful when [holds] is `false`, providing details about
+  /// why the formula failed (e.g., which sub-formula failed at what point,
+  /// or a boundary condition was met).
+  ///
+  /// Example: "Atomic proposition 'is_loading' failed", "Eventually failed: Operand never held."
   final String? reason;
 
-  /// Optional index or timestamp related to the evaluation outcome (e.g., where it failed).
+  /// The timestamp within the trace that is most relevant to this result.
+  ///
+  /// For failures, this often indicates the timestamp of the [TraceEvent]
+  /// where the violation occurred.
+  /// For successes, its meaning might vary depending on the operator.
   final Duration? relatedTimestamp;
+
+  /// The index within the trace's event list that is most relevant to this result.
+  ///
+  /// Similar to [relatedTimestamp], this often indicates the index of the
+  /// [TraceEvent] where a failure occurred.
   final int? relatedIndex;
 
+  /// Creates a detailed evaluation result.
+  ///
+  /// - [holds]: Whether the formula was satisfied.
+  /// - [reason]: Optional explanation, especially for failures.
+  /// - [relatedTimestamp]: Optional timestamp related to the outcome.
+  /// - [relatedIndex]: Optional index related to the outcome.
   const EvaluationResult(this.holds, {this.reason, this.relatedTimestamp, this.relatedIndex});
 
+  /// Creates a successful evaluation result (`holds` is `true`).
+  /// Provides minimal information, suitable when only success/failure matters.
   const EvaluationResult.success() : this(true);
+
+  /// Creates a failure evaluation result (`holds` is `false`).
+  /// Requires a [reason] explaining the failure.
+  /// Optionally includes [relatedTimestamp] and [relatedIndex] for context.
   const EvaluationResult.failure(String this.reason, {this.relatedTimestamp, this.relatedIndex}) : holds = false;
 
+  /// Provides a concise string representation of the result.
+  /// Includes the reason and location (time/index) if available.
+  /// Example: `EvaluationResult(holds: false: Always failed: Operand failed at 150ms)`
   @override
   String toString() {
     final details = reason != null ? ': $reason' : '';
@@ -31,20 +72,58 @@ class EvaluationResult {
   }
 }
 
-/// Evaluates a temporal logic [formula] against a given [trace].
+/// Evaluates a temporal logic [formula] against a given timed [trace]
+/// starting from a specific [startIndex].
 ///
-/// This is the main entry point for checking if a sequence of timed events
-/// satisfies a temporal property.
+/// This function acts as the main entry point for evaluating any [Formula]
+/// (including basic boolean logic, LTL operators, and potentially extended
+/// operators like those in MTL if handled by subclasses) against a formal [Trace].
+/// It performs initial checks and delegates the core recursive logic to
+/// [_evaluateFormula].
 ///
-/// [startIndex] specifies the index in the trace from which to start evaluation (usually 0).
+/// The evaluation semantic is typically point-based: the result indicates whether
+/// the [formula] holds true *at* the [startIndex] within the [trace]. Temporal
+/// operators inherently look at the suffix of the trace starting from [startIndex].
+///
+/// **Example Semantics:**
+/// - `evaluateTrace(trace, Always(p), startIndex: 2)` checks if `p` holds at
+///   indices 2, 3, 4, ... of the trace.
+/// - `evaluateTrace(trace, Eventually(q), startIndex: 5)` checks if `q` holds
+///   at index 5 or any subsequent index.
+///
+/// **Parameters:**
+/// - [trace]: The sequence of timed states/events ([TraceEvent]) to evaluate
+///   against. Must have monotonically non-decreasing timestamps.
+/// - [formula]: The temporal logic formula ([Formula]) to evaluate.
+/// - [startIndex]: The 0-based index in `trace.events` from which to begin
+///   evaluation. Defaults to 0 (evaluate from the start of the trace). Must be
+///   non-negative.
+///
+/// **Returns:**
+///   An [EvaluationResult] object containing:
+///   - `holds`: Boolean indicating if the formula is satisfied at [startIndex].
+///   - `reason`: Optional explanation, especially if `holds` is false.
+///   - `relatedIndex` / `relatedTimestamp`: Optional context about the specific
+///     point in the trace relevant to the result (e.g., where a violation occurred).
+///
+/// **Handling of Trace Boundaries:**
+/// - A negative [startIndex] immediately results in a failure.
+/// - Evaluating at or beyond the end of the trace (`startIndex >= trace.length`)
+///   is permissible. The outcome depends on the specific formula:
+///     - `Always(f)` is vacuously `true` on an empty suffix.
+///     - `Eventually(f)` is `false` on an empty suffix.
+///     - `AtomicProposition(p)` fails because there is no state to evaluate.
+///     - Other operators are handled recursively.
 EvaluationResult evaluateTrace<T>(Trace<T> trace, Formula<T> formula, {int startIndex = 0}) {
-  // Handle base cases and edge conditions
-  if (startIndex < 0 || startIndex > trace.length) {
-    // It might be valid for startIndex == trace.length for some formulas (e.g., G(p) is true on empty suffix)
-    // but generally, starting beyond the trace length implies failure or vacuously true depending on formula.
-    // Let the formula-specific logic handle index checks.
-    // return EvaluationResult.failure('Start index $startIndex out of bounds for trace length ${trace.length}');
+  // Initial checks might be added here, but core logic delegates to _evaluateFormula.
+  // Bounds checking related to startIndex is often handled within the specific
+  // operator logic as they look into the future of the trace.
+  if (startIndex < 0) {
+    // Returning failure here as negative indices are always invalid.
+    return EvaluationResult.failure('Start index $startIndex cannot be negative.', relatedIndex: startIndex);
   }
+  // Allow startIndex >= trace.length, as some formulas (like G(p)) can be vacuously true
+  // on an empty trace suffix.
 
   return _evaluateFormula(trace, formula, startIndex);
 }
@@ -64,7 +143,7 @@ EvaluationResult _evaluateFormula<T>(Trace<T> trace, Formula<T> formula, int ind
     case AtomicProposition<T> p:
       if (index >= trace.length)
         return EvaluationResult.failure("Atomic proposition evaluated past trace end.", relatedIndex: index);
-      final holds = p.pred(trace.events[index].value);
+      final holds = p.predicate(trace.events[index].value);
       return EvaluationResult(holds,
           reason: !holds ? '${p.name ?? "Atomic"} failed' : null,
           relatedIndex: index,
@@ -185,25 +264,48 @@ EvaluationResult _evaluateFormula<T>(Trace<T> trace, Formula<T> formula, int ind
   }
 }
 
-/// Evaluates an LTL formula on a given trace.
+/// Evaluates a classic LTL (Linear Temporal Logic) formula on a given list of states.
 ///
-/// LTL semantics typically start evaluation from the beginning of the trace (index 0).
-/// Assumes the `eval` method implemented in each [Formula] subclass correctly
-/// handles the recursive LTL semantics over the provided trace `t` starting from index `i=0`.
+/// This is a convenience wrapper around [evaluateTrace] for scenarios where only
+/// the *sequence* of states matters, and explicit timing information is not
+/// required or available. It simplifies LTL evaluation by automatically converting
+/// the input list into a [Trace] with default (e.g., 1ms) intervals between states.
 ///
-/// - [formula]: The LTL formula to evaluate.
-/// - [trace]: The sequence of states.
+/// Use this function for pure LTL checking without time constraints.
 ///
-/// Returns `true` if the formula holds on the trace, `false` otherwise.
-/// Returns `false` if the trace is empty.
-bool evaluateLtl<T>(Formula<T> formula, List<T> trace) {
-  if (trace.isEmpty) {
+/// **Behavior:**
+/// 1. Checks if the input [traceStates] list is empty. If so, returns `false`
+///    (common convention for LTL on empty traces, though `Always` is technically true).
+/// 2. Creates a `Trace<T>` using `Trace.fromList`, assigning incremental timestamps.
+/// 3. Calls the main [evaluateTrace] function, starting the evaluation from the
+///    beginning of this generated trace (`startIndex = 0`).
+/// 4. Returns only the boolean `holds` field from the [EvaluationResult].
+///
+/// **Limitations:**
+/// - **No Time Semantics:** This function discards any real-world timing. Formulas
+///   involving specific time bounds (like those in Metric Temporal Logic) cannot
+///   be correctly evaluated using this function.
+/// - **Empty Trace Handling:** Returns `false` for empty traces, which might differ
+///   from the strict mathematical semantics for operators like `Always` (which is
+///   vacuously true on empty traces). This behavior aligns with practical
+///   expectations where properties are usually checked on non-empty executions.
+///
+/// Parameters:
+///   - [formula]: The LTL [Formula] to evaluate.
+///   - [traceStates]: The ordered sequence of states (type [T]).
+///
+/// Returns:
+///   `true` if the [formula] holds for the sequence according to standard LTL
+///   semantics evaluated from the start; `false` otherwise (including for empty
+///   [traceStates]).
+bool evaluateLtl<T>(Formula<T> formula, List<T> traceStates) {
+  if (traceStates.isEmpty) {
     // LTL evaluation on an empty trace is often considered false for most practical formulas,
     // especially those involving Eventually or Until. Returning false aligns with prior behavior.
     return false;
   }
   // Convert the list to a Trace (using default 1ms interval)
-  final timedTrace = Trace<T>.fromList(trace);
+  final timedTrace = Trace<T>.fromList(traceStates);
   // Use the primary trace evaluator, starting at index 0.
   final result = evaluateTrace(timedTrace, formula);
   return result.holds;

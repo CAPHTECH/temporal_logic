@@ -4,34 +4,74 @@ import 'time_interval.dart';
 
 // --- MTL AST Nodes ---
 
-/// Represents the timed eventually operator: F_I phi
+/// Represents the timed eventually operator `F_I φ` (Finally within Interval).
+///
+/// Asserts that the [operand] formula `φ` holds true at some point `k`
+/// in the trace suffix starting from the evaluation point `i`, such that the time
+/// difference `timestamp(k) - timestamp(i)` falls within the specified [interval] `I`.
+///
+/// Example: `EventuallyTimed(isReady, TimeInterval.upTo(Duration(seconds: 5)))`
+/// asserts that `isReady` becomes true within 5 seconds from the current time.
 final class EventuallyTimed<T> extends Formula<T> {
+  /// The formula `φ` that must eventually hold within the interval.
   final Formula<T> operand;
+
+  /// The time interval `I` within which the [operand] must hold.
   final TimeInterval interval;
 
+  /// Creates a timed eventually formula `F_I φ`.
   const EventuallyTimed(this.operand, this.interval);
 
   @override
   String toString() => 'F$interval($operand)';
 }
 
-/// Represents the timed always operator: G_I phi
+/// Represents the timed always operator `G_I φ` (Globally within Interval).
+///
+/// Asserts that the [operand] formula `φ` holds true at all points `k`
+/// in the trace suffix starting from the evaluation point `i`, such that the time
+/// difference `timestamp(k) - timestamp(i)` falls within the specified [interval] `I`.
+///
+/// If no points `k` fall within the interval `I` relative to point `i`,
+/// the formula is considered vacuously true.
+///
+/// Example: `AlwaysTimed(isStable, TimeInterval(Duration(seconds: 1), Duration(seconds: 10)))`
+/// asserts that `isStable` holds continuously between 1 and 10 seconds from now.
 final class AlwaysTimed<T> extends Formula<T> {
+  /// The formula `φ` that must always hold within the interval.
   final Formula<T> operand;
+
+  /// The time interval `I` throughout which the [operand] must hold.
   final TimeInterval interval;
 
+  /// Creates a timed always formula `G_I φ`.
   const AlwaysTimed(this.operand, this.interval);
 
   @override
   String toString() => 'G$interval($operand)';
 }
 
-/// Represents the timed until operator: phi U_I psi
+/// Represents the timed until operator `φ U_I ψ` (Until within Interval).
+///
+/// Asserts that there exists a point `k` in the trace suffix starting from `i` such that:
+/// 1. The time difference `timestamp(k) - timestamp(i)` falls within the [interval] `I`.
+/// 2. The [right] formula `ψ` holds at point `k`.
+/// 3. For all points `j` such that `i <= j < k`, the [left] formula `φ` holds.
+///
+/// Example: `requesting.untilTimed(granted, TimeInterval.upTo(Duration(seconds: 2)))`
+/// asserts that `requesting` holds until `granted` becomes true, and that `granted`
+/// becomes true within 2 seconds.
 final class UntilTimed<T> extends Formula<T> {
+  /// The formula `φ` that must hold until [right] becomes true.
   final Formula<T> left;
+
+  /// The formula `ψ` that must eventually become true within the interval.
   final Formula<T> right;
+
+  /// The time interval `I` within which [right] must become true.
   final TimeInterval interval;
 
+  /// Creates a timed until formula `φ U_I ψ`.
   const UntilTimed(this.left, this.right, this.interval);
 
   @override
@@ -40,13 +80,38 @@ final class UntilTimed<T> extends Formula<T> {
 
 // --- Integrated MTL/LTL Evaluator ---
 
-/// Evaluates an LTL or MTL [formula] against a given timed [trace].
+/// Evaluates a temporal logic [formula] (potentially including both LTL and MTL
+/// operators) against a given timed [trace], starting from [startIndex].
 ///
-/// This is the main entry point for checking if a sequence of timed events
-/// satisfies a temporal property expressed using LTL or MTL operators.
+/// This function serves as the primary entry point for checking specifications
+/// involving time. It handles both standard LTL operators (from `temporal_logic_core`)
+/// and MTL operators (like [EventuallyTimed], [AlwaysTimed], [UntilTimed])
+/// defined in this library.
 ///
-/// [startIndex] specifies the index in the trace from which to start evaluation (usually 0).
-/// The evaluation result provides details on whether the formula holds and potentially why.
+/// Evaluation starts at the given [startIndex] of the trace (defaults to 0).
+/// Temporal operators consider the suffix of the trace starting from this index,
+/// taking into account the timestamps of events for MTL operators.
+///
+/// Parameters:
+/// - [trace]: The sequence of timed states/events ([TraceEvent]) to evaluate
+///   against. Timestamps must be monotonically non-decreasing.
+/// - [formula]: The LTL or MTL formula to evaluate.
+/// - [startIndex]: The 0-based index in the [trace] from which to begin
+///   evaluation. Defaults to 0. Must be non-negative and not exceed the
+///   trace length.
+///
+/// Returns an [EvaluationResult] indicating success or failure, potentially
+/// with details on the reason for failure and the relevant time/index.
+///
+/// **Semantics Overview:**
+/// - Standard LTL operators behave as defined in `temporal_logic_core`'s `evaluateTrace`,
+///   considering only the sequence order relative to [startIndex].
+/// - MTL operators ([EventuallyTimed], [AlwaysTimed], [UntilTimed]) evaluate their
+///   operands based on whether subsequent events fall within the specified
+///   [TimeInterval] relative to the event at [startIndex].
+/// - See the documentation for specific MTL operators for detailed semantics.
+///
+/// **Note:** This function uses [_evaluateRecursive] internally.
 EvaluationResult evaluateMtlTrace<T>(Trace<T> trace, Formula<T> formula, {int startIndex = 0}) {
   // Check for empty trace for certain operators early?
   // Or let recursive calls handle it.
@@ -75,7 +140,7 @@ EvaluationResult _evaluateRecursive<T>(Trace<T> trace, Formula<T> formula, int i
       if (index >= trace.length)
         return EvaluationResult.failure("Atomic proposition evaluated past trace end.", relatedIndex: index);
       final currentEvent = trace.events[index];
-      final holds = p.pred(currentEvent.value);
+      final holds = p.predicate(currentEvent.value);
       return EvaluationResult(holds,
           reason: !holds ? '${p.name ?? "Atomic"} failed' : null,
           relatedIndex: index,
@@ -337,8 +402,7 @@ bool checkEventuallyWithin<S>(
     // Check if the current time point is within the interval
     if (interval.contains(timeOffset)) {
       // Evaluate the proposition directly on the state at time i
-      if (operand.pred(trace.events[i].value)) {
-        // Call pred directly
+      if (operand.predicate(trace.events[i].value)) {
         return true; // Found a time point satisfying the operand within the interval
       }
     }
@@ -377,7 +441,7 @@ bool checkAlwaysWithin<S>(
 
     if (isInInterval) {
       relevantPointChecked = true; // Mark that we checked at least one point
-      final operandResult = operand.pred(currentValue); // Call pred directly
+      final operandResult = operand.predicate(currentValue);
       if (!operandResult) {
         return false; // Found a time point violating the operand within the interval
       }
@@ -415,13 +479,13 @@ bool checkUntilWithin<S>(
     final stateK = trace.events[k].value;
 
     // Check if 'right' (psi) holds at time k, and time k is within the interval
-    if (interval.contains(timeOffsetK) && right.pred(stateK)) {
+    if (interval.contains(timeOffsetK) && right.predicate(stateK)) {
       // Found a potential endpoint k for the Until.
       // Now, check if 'left' (phi) held true at all points j from 0 up to (but not including) k.
       bool leftHeldPreviously = true;
       for (int j = 0; j < k; j++) {
         final stateJ = trace.events[j].value;
-        if (!left.pred(stateJ)) {
+        if (!left.predicate(stateJ)) {
           leftHeldPreviously = false;
           break; // Found a point before k where left didn't hold
         }

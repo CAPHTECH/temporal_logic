@@ -2,7 +2,11 @@ import 'dart:async';
 
 import 'package:temporal_logic_mtl/temporal_logic_mtl.dart';
 
-/// Observes a stream of timed states and evaluates an LTL/MTL formula.
+/// Provides periodic evaluation of a temporal logic [Formula]<S> (LTL/MTL)
+/// against a stream of time-stamped values. Incoming events are accumulated
+/// into an internal trace and evaluated on every new event.
+///
+/// Type parameter [S] defines the type of the state values in the trace.
 class StreamMtlChecker<S> {
   final Stream<TimedValue<S>> _stream;
   // Accept a full Formula<S> which can contain LTL and MTL operators
@@ -14,10 +18,15 @@ class StreamMtlChecker<S> {
   // Use EvaluationResult to potentially provide more info later
   final _resultController = StreamController<EvaluationResult>.broadcast();
 
-  /// Stream that emits the EvaluationResult of the LTL/MTL check.
+  /// A broadcast [Stream] emitting the [EvaluationResult] whenever
+  /// the temporal logic [formula] is evaluated against the current trace,
+  /// including an initial evaluation and on each new incoming event.
   Stream<EvaluationResult> get resultStream => _resultController.stream;
 
-  /// Creates a checker for a specific LTL/MTL [formula] on the [stream].
+  /// Creates a [StreamMtlChecker] that listens to the specified [stream] of
+  /// timed states and evaluates the given [formula]. If [initialValue] is
+  /// provided, it is used as the first trace event before any stream emissions.
+  /// Evaluation occurs on each new event and immediately for the initial value.
   StreamMtlChecker(
     this._stream, {
     required Formula<S> formula,
@@ -80,7 +89,9 @@ class StreamMtlChecker<S> {
     return evaluateMtlTrace(currentTrace, _formula);
   }
 
-  /// Disposes the checker, cancelling subscriptions and closing streams.
+  /// Disposes the checker by cancelling the stream subscription, closing
+  /// the [resultStream], and clearing all internal trace events.
+  /// After disposal, no further results will be emitted.
   void dispose() {
     _subscription?.cancel();
     if (!_resultController.isClosed) {
