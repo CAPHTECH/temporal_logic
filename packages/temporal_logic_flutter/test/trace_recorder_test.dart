@@ -13,17 +13,10 @@ Matcher closeToDuration(Duration expected, Duration delta) {
 
 void main() {
   group('TraceRecorder', () {
-    // Remove setUp and recorder instance from here
-    // late TraceRecorder<String> recorder;
-    // setUp(() {
-    //   recorder = TraceRecorder<String>();
-    // });
-
     test('records events with timestamps relative to initialize', () {
       fakeAsync((async) {
         // Create recorder INSIDE fakeAsync, passing the zone's clock
         final recorder = TraceRecorder<String>(clock: clock);
-        // final startTime = clock.now(); // Use clock.now() from fakeAsync context
 
         recorder.initialize(); // Initialize using the fake clock implicitly
 
@@ -49,7 +42,6 @@ void main() {
       // No fakeAsync needed here as no time manipulation occurs
       final recorder = TraceRecorder<String>();
       // No initialize call
-      // recorder.record('hello'); // Calling record w/o init throws, test this separately
       expect(recorder.trace.isEmpty, isTrue);
     });
 

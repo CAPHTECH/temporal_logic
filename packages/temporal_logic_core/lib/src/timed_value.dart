@@ -7,6 +7,7 @@ import 'package:meta/meta.dart';
 class TimedValue<T> {
   /// The value recorded at the timestamp.
   final T value;
+
   /// The time at which the value was recorded.
   final Duration timestamp;
 
@@ -28,12 +29,13 @@ class TimedValue<T> {
     // Format timestamp concisely (e.g., 100ms, 1.5s)
     String formatDuration(Duration d) {
       // Keep milliseconds if < 1000 or exactly 1000
-      if (d.inMilliseconds <= 1000) { 
+      if (d.inMilliseconds <= 1000) {
         return '${d.inMilliseconds}ms';
       }
       // Add more formatting if needed, e.g., for minutes/hours
       return '${(d.inMilliseconds / 1000).toStringAsFixed(1)}s';
     }
+
     return '($value @ ${formatDuration(timestamp)})';
   }
 }
@@ -83,8 +85,8 @@ class Trace<T> {
     // Add assertion for monotonic timestamps
     if (this.events.length > 1) {
       for (int i = 1; i < this.events.length; i++) {
-        assert(this.events[i].timestamp >= this.events[i-1].timestamp, 
-               'Timestamps must be monotonically non-decreasing. Failed at index $i: ${this.events[i-1].timestamp} -> ${this.events[i].timestamp}');
+        assert(this.events[i].timestamp >= this.events[i - 1].timestamp,
+            'Timestamps must be monotonically non-decreasing. Failed at index $i: ${this.events[i - 1].timestamp} -> ${this.events[i].timestamp}');
       }
     }
   }
@@ -137,4 +139,4 @@ class Trace<T> {
     }
     return true;
   }
-} 
+}

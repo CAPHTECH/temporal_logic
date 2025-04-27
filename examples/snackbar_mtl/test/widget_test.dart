@@ -20,9 +20,6 @@ SnackbarState getCurrentSnackbarState(WidgetTester tester, int currentTriggerCou
   }
   // If visible, extract content (assuming it must exist if visible)
   // Return the visible state. Content check might be removed if not needed.
-  // final snackbarWidget = tester.widget<SnackBar>(snackbarFinder.first);
-  // final contentWidget = snackbarWidget.content as Text;
-  // Need to decide if content matters for the 'showing' state or if just visible is enough
   return SnackbarState.visible; // Corrected to use the enum member
 }
 

@@ -19,29 +19,18 @@
 final class AtomicProposition<T> extends Formula<T> {
   /// The predicate function that defines the atomic proposition.
   final bool Function(T state) pred;
-  final String? name; // Optional name for better toString
+  final String? name;
 
   const AtomicProposition(this.pred, {this.name});
 
-  // @override
-  // bool eval(List<T> t, int i) {
-  //   if (i < 0 || i >= t.length) {
-  //     return false;
-  //   }
-  //   return pred(t[i]);
-  // }
-
   @override
-  String toString() => name ?? '$pred'; // Use name if provided
+  String toString() => name ?? '$pred';
 }
 
 /// Represents the logical negation (`NOT` or `!`) of a formula.
 final class Not<T> extends Formula<T> {
   final Formula<T> operand;
   const Not(this.operand);
-
-  // @override
-  // bool eval(List<T> t, int i) => !operand.eval(t, i);
 
   @override
   String toString() => '!($operand)';
@@ -53,9 +42,6 @@ final class And<T> extends Formula<T> {
   final Formula<T> right;
   const And(this.left, this.right);
 
-  // @override
-  // bool eval(List<T> t, int i) => left.eval(t, i) && right.eval(t, i);
-
   @override
   String toString() => '($left && $right)';
 }
@@ -66,21 +52,15 @@ final class Or<T> extends Formula<T> {
   final Formula<T> right;
   const Or(this.left, this.right);
 
-  // @override
-  // bool eval(List<T> t, int i) => left.eval(t, i) || right.eval(t, i);
-
   @override
   String toString() => '($left || $right)';
 }
 
 /// Represents the logical implication (`IMPLIES` or `->`).
 final class Implies<T> extends Formula<T> {
-  final Formula<T> left; // Antecedent
-  final Formula<T> right; // Consequent
+  final Formula<T> left;
+  final Formula<T> right;
   const Implies(this.left, this.right);
-
-  // @override
-  // bool eval(List<T> t, int i) => !left.eval(t, i) || right.eval(t, i);
 
   @override
   String toString() => '($left -> $right)';
@@ -95,25 +75,6 @@ final class Next<T> extends Formula<T> {
   final Formula<T> operand;
   const Next(this.operand);
 
-  // @override
-  // bool eval(List<T> t, int i) {
-  //   // Handle invalid current index
-  //   if (i < -1 || i >= t.length) return false;
-  //   // Note: We allow i == -1 slightly unconventionally to simplify some recursive definitions
-  //   // later, but for direct evaluation, i < 0 is usually an error/false.
-  //   // Let's refine this: standard eval expects i >= 0.
-  //   if (i < 0) return false;
-  //
-  //   // Check if a next state exists
-  //   final nextIndex = i + 1;
-  //   if (nextIndex >= t.length) {
-  //     return false; // Finite trace semantics: no next state means Xp is false
-  //   }
-  //
-  //   // Evaluate operand at the next state
-  //   return operand.eval(t, nextIndex);
-  // }
-
   @override
   String toString() => 'X($operand)';
 }
@@ -125,24 +86,6 @@ final class Next<T> extends Formula<T> {
 final class Always<T> extends Formula<T> {
   final Formula<T> operand;
   const Always(this.operand);
-
-  // @override
-  // bool eval(List<T> t, int i) {
-  //   // Handle strictly invalid current index (negative)
-  //   if (i < 0) return false;
-  //
-  //   // The loop condition (k < t.length) correctly handles the case where i >= t.length.
-  //   // G p is vacuously true over an empty suffix.
-  //
-  //   // Check operand at all indices from i to the end of the trace
-  //   for (var k = i; k < t.length; k++) {
-  //     if (!operand.eval(t, k)) {
-  //       return false;
-  //     }
-  //   }
-  //   // If the loop completes without returning false, the operand holds everywhere (or the suffix was empty)
-  //   return true;
-  // }
 
   @override
   String toString() => 'G($operand)';
@@ -156,21 +99,6 @@ final class Eventually<T> extends Formula<T> {
   final Formula<T> operand;
   const Eventually(this.operand);
 
-  // @override
-  // bool eval(List<T> t, int i) {
-  //   // Handle invalid current index
-  //   if (i < 0 || i >= t.length) return false;
-  //
-  //   // Check operand at index i and all subsequent indices
-  //   for (var k = i; k < t.length; k++) {
-  //     if (operand.eval(t, k)) {
-  //       return true; // Found a state where the operand holds
-  //     }
-  //   }
-  //   // If the loop completes, the operand never holds from i onwards
-  //   return false;
-  // }
-
   @override
   String toString() => 'F($operand)';
 }
@@ -181,37 +109,9 @@ final class Eventually<T> extends Formula<T> {
 /// `right` holds at `k`, and for all indices `j` where `i <= j < k`,
 /// `left` holds at `j`.
 final class Until<T> extends Formula<T> {
-  final Formula<T> left;  // The condition that must hold until the right side holds
-  final Formula<T> right; // The condition that must eventually hold
+  final Formula<T> left;
+  final Formula<T> right;
   const Until(this.left, this.right);
-
-  // @override
-  // bool eval(List<T> t, int i) {
-  //   // Handle invalid current index
-  //   if (i < 0 || i >= t.length) return false;
-  //
-  //   // Iterate through future states (k >= i)
-  //   for (var k = i; k < t.length; k++) {
-  //     // Check if the 'right' condition holds at k
-  //     if (right.eval(t, k)) {
-  //       // Now check if 'left' holds for all states from i up to (but not including) k
-  //       bool leftHolds = true;
-  //       for (var j = i; j < k; j++) {
-  //         if (!left.eval(t, j)) {
-  //           leftHolds = false;
-  //           break;
-  //         }
-  //       }
-  //       // If 'left' held all the way, then 'until' is satisfied
-  //       if (leftHolds) {
-  //         return true;
-  //       }
-  //     }
-  //   }
-  //
-  //   // If the loop completes without finding a suitable k, 'until' is false
-  //   return false;
-  // }
 
   @override
   String toString() => '($left U $right)';
@@ -227,39 +127,6 @@ final class WeakUntil<T> extends Formula<T> {
   final Formula<T> right;
   const WeakUntil(this.left, this.right);
 
-  // @override
-  // bool eval(List<T> t, int i) {
-  //   // Handle invalid current index
-  //   if (i < 0 || i >= t.length) return false;
-  //
-  //   // Iterate through future states (k >= i), checking both conditions.
-  //   for (var k = i; k < t.length; k++) {
-  //     // Check if 'right' holds at k. If so, we need 'left' to have held until now.
-  //     if (right.eval(t, k)) {
-  //       bool leftHeldUntilK = true;
-  //       for (var j = i; j < k; j++) {
-  //         if (!left.eval(t, j)) {
-  //           leftHeldUntilK = false;
-  //           break;
-  //         }
-  //       }
-  //       if (leftHeldUntilK) {
-  //         return true; // Condition 1 (like Until) met.
-  //       }
-  //     }
-  //
-  //     // If 'right' didn't hold at k, 'left' must hold at k to potentially satisfy condition 2 (Always left).
-  //     if (!left.eval(t, k)) {
-  //       // If left fails at any point k where right hasn't held, WeakUntil fails.
-  //       return false;
-  //     }
-  //   }
-  //
-  //   // If the loop completes, it means 'right' never held, but 'left' held for all k >= i.
-  //   // This satisfies condition 2 (like Always left).
-  //   return true;
-  // }
-
   @override
   String toString() => '($left W $right)';
 }
@@ -274,40 +141,6 @@ final class Release<T> extends Formula<T> {
   final Formula<T> left;
   final Formula<T> right;
   const Release(this.left, this.right);
-
-  // @override
-  // bool eval(List<T> t, int i) {
-  //   // Handle invalid current index
-  //   if (i < 0 || i >= t.length) return false;
-  //
-  //   // Iterate through future states (k >= i)
-  //   for (var k = i; k < t.length; k++) {
-  //     // If 'left' holds at k, then 'right' must have held for all j from i to k (inclusive)
-  //     if (left.eval(t, k)) {
-  //       bool rightHeldUntilK = true;
-  //       for (var j = i; j <= k; j++) {
-  //         if (!right.eval(t, j)) {
-  //           rightHeldUntilK = false;
-  //           break;
-  //         }
-  //       }
-  //       if (rightHeldUntilK) {
-  //         return true;
-  //       }
-  //     }
-  //   }
-  //
-  //   // If the loop finished without 'left' ever holding,
-  //   // then 'right' must hold for all indices >= i
-  //   for (var k = i; k < t.length; k++) {
-  //     if (!right.eval(t, k)) {
-  //       return false; // 'right' failed, and 'left' never became true, so Release is false
-  //     }
-  //   }
-  //
-  //   // If the loop completes, 'right' held for all k >= i (and 'left' never held)
-  //   return true;
-  // }
 
   @override
   String toString() => '($left R $right)';
@@ -327,6 +160,3 @@ extension LogicalConnectives<T> on Formula<T> {
   /// Creates a logical NOT formula (`!this`).
   Not<T> not() => Not<T>(this);
 }
-
-// Removed unused CheckResult enum
-// Release (R) will follow. 

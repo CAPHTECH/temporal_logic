@@ -1,7 +1,6 @@
 import 'dart:async';
 
 import 'package:temporal_logic_mtl/temporal_logic_mtl.dart';
-// import 'mtl_check_type.dart'; // No longer needed
 
 /// Observes a stream of timed states and evaluates an LTL/MTL formula.
 class StreamMtlChecker<S> {
@@ -14,8 +13,6 @@ class StreamMtlChecker<S> {
   StreamSubscription<TimedValue<S>>? _subscription;
   // Use EvaluationResult to potentially provide more info later
   final _resultController = StreamController<EvaluationResult>.broadcast();
-  // Remove _lastResult tracking for emission logic, maybe keep for optimization later
-  // EvaluationResult _lastResult = const EvaluationResult(false, reason: 'Initial'); // Initial state
 
   /// Stream that emits the EvaluationResult of the LTL/MTL check.
   Stream<EvaluationResult> get resultStream => _resultController.stream;
@@ -53,8 +50,6 @@ class StreamMtlChecker<S> {
         _evaluateAndNotify();
       },
       onDone: () {
-        // Optional: Final evaluation if needed, though last event should trigger it.
-        // _evaluateAndNotify();
         if (!_resultController.isClosed) {
           _resultController.close(); // Close after potential last emit
         }
@@ -75,7 +70,6 @@ class StreamMtlChecker<S> {
     if (!_resultController.isClosed) {
       _resultController.add(currentResult);
     }
-    // Note: _lastResult is no longer used for emission logic.
   }
 
   /// Performs the actual LTL/MTL check using the integrated evaluator.

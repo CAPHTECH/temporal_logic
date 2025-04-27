@@ -24,8 +24,9 @@ class EvaluationResult {
   @override
   String toString() {
     final details = reason != null ? ': $reason' : '';
-    final timeInfo = relatedTimestamp != null ? ' at ${relatedTimestamp!.inMilliseconds}ms' 
-                    : (relatedIndex != null ? ' at index $relatedIndex' : '');
+    final timeInfo = relatedTimestamp != null
+        ? ' at ${relatedTimestamp!.inMilliseconds}ms'
+        : (relatedIndex != null ? ' at index $relatedIndex' : '');
     return 'EvaluationResult(holds: $holds$details$timeInfo)';
   }
 }
@@ -44,7 +45,7 @@ EvaluationResult evaluateTrace<T>(Trace<T> trace, Formula<T> formula, {int start
     // Let the formula-specific logic handle index checks.
     // return EvaluationResult.failure('Start index $startIndex out of bounds for trace length ${trace.length}');
   }
-  
+
   return _evaluateFormula(trace, formula, startIndex);
 }
 
@@ -54,19 +55,27 @@ EvaluationResult _evaluateFormula<T>(Trace<T> trace, Formula<T> formula, int ind
   // Many operators need to look ahead, so they handle their own bounds checks relative to `index`.
   // However, accessing trace.events[index] requires index < trace.length.
   if (index < 0) {
-     return EvaluationResult.failure("Evaluation index cannot be negative.", relatedIndex: index); // Should not happen with proper calls
+    return EvaluationResult.failure("Evaluation index cannot be negative.",
+        relatedIndex: index); // Should not happen with proper calls
   }
   // Note: index == trace.length is a valid state for some operators (e.g., G(p) is true).
 
   switch (formula) {
     case AtomicProposition<T> p:
-      if (index >= trace.length) return EvaluationResult.failure("Atomic proposition evaluated past trace end.", relatedIndex: index);
+      if (index >= trace.length)
+        return EvaluationResult.failure("Atomic proposition evaluated past trace end.", relatedIndex: index);
       final holds = p.pred(trace.events[index].value);
-      return EvaluationResult(holds, reason: !holds ? '${p.name ?? "Atomic"} failed' : null, relatedIndex: index, relatedTimestamp: trace.events[index].timestamp);
+      return EvaluationResult(holds,
+          reason: !holds ? '${p.name ?? "Atomic"} failed' : null,
+          relatedIndex: index,
+          relatedTimestamp: trace.events[index].timestamp);
 
     case Not<T> f:
       final innerResult = _evaluateFormula(trace, f.operand, index);
-      return EvaluationResult(!innerResult.holds, reason: innerResult.holds ? 'Negated formula held' : innerResult.reason, relatedIndex: innerResult.relatedIndex, relatedTimestamp: innerResult.relatedTimestamp);
+      return EvaluationResult(!innerResult.holds,
+          reason: innerResult.holds ? 'Negated formula held' : innerResult.reason,
+          relatedIndex: innerResult.relatedIndex,
+          relatedTimestamp: innerResult.relatedTimestamp);
 
     case And<T> f:
       final leftResult = _evaluateFormula(trace, f.left, index);
@@ -83,79 +92,98 @@ EvaluationResult _evaluateFormula<T>(Trace<T> trace, Formula<T> formula, int ind
       // If left failed and right held, return success.
       if (rightResult.holds) return const EvaluationResult.success();
       // Both failed. Return combined reason or prioritize one?
-      return EvaluationResult.failure('Both sides of OR failed (${leftResult.reason ?? 'Left'}, ${rightResult.reason ?? 'Right'})', relatedIndex: index); // Index might not be precise
+      return EvaluationResult.failure(
+          'Both sides of OR failed (${leftResult.reason ?? 'Left'}, ${rightResult.reason ?? 'Right'})',
+          relatedIndex: index); // Index might not be precise
 
     case Implies<T> f:
       final leftResult = _evaluateFormula(trace, f.left, index);
       if (!leftResult.holds) return const EvaluationResult.success(); // Antecedent is false, implication holds
       final rightResult = _evaluateFormula(trace, f.right, index);
       // Antecedent is true, result depends on consequent
-      if (!rightResult.holds) return EvaluationResult.failure('Antecedent held but consequent failed: ${rightResult.reason ?? "Consequent eval failed"}', relatedIndex: rightResult.relatedIndex, relatedTimestamp: rightResult.relatedTimestamp);
+      if (!rightResult.holds)
+        return EvaluationResult.failure(
+            'Antecedent held but consequent failed: ${rightResult.reason ?? "Consequent eval failed"}',
+            relatedIndex: rightResult.relatedIndex,
+            relatedTimestamp: rightResult.relatedTimestamp);
       return const EvaluationResult.success();
 
     case Next<T> f:
-       final nextIndex = index + 1;
-       if (nextIndex >= trace.length) return EvaluationResult.failure('Next evaluated past trace end.', relatedIndex: index);
-       // Evaluate operand at the next index
-       return _evaluateFormula(trace, f.operand, nextIndex);
+      final nextIndex = index + 1;
+      if (nextIndex >= trace.length)
+        return EvaluationResult.failure('Next evaluated past trace end.', relatedIndex: index);
+      // Evaluate operand at the next index
+      return _evaluateFormula(trace, f.operand, nextIndex);
 
     case Always<T> f:
-       for (var k = index; k < trace.length; k++) {
-         final stepResult = _evaluateFormula(trace, f.operand, k);
-         if (!stepResult.holds) {
-           return EvaluationResult.failure('Always failed: ${stepResult.reason ?? "Operand failed"}', relatedIndex: k, relatedTimestamp: trace.events[k].timestamp);
-         }
-       }
-       return const EvaluationResult.success(); // Holds for all steps (or trace suffix was empty)
+      for (var k = index; k < trace.length; k++) {
+        final stepResult = _evaluateFormula(trace, f.operand, k);
+        if (!stepResult.holds) {
+          return EvaluationResult.failure('Always failed: ${stepResult.reason ?? "Operand failed"}',
+              relatedIndex: k, relatedTimestamp: trace.events[k].timestamp);
+        }
+      }
+      return const EvaluationResult.success(); // Holds for all steps (or trace suffix was empty)
 
     case Eventually<T> f:
-        if (index >= trace.length) return EvaluationResult.failure('Eventually evaluated on empty trace suffix.', relatedIndex: index); // F(p) is false on empty suffix
-        for (var k = index; k < trace.length; k++) {
-          final stepResult = _evaluateFormula(trace, f.operand, k);
-          if (stepResult.holds) {
-            return const EvaluationResult.success(); // Found a state where it holds
-          }
+      if (index >= trace.length)
+        return EvaluationResult.failure('Eventually evaluated on empty trace suffix.',
+            relatedIndex: index); // F(p) is false on empty suffix
+      for (var k = index; k < trace.length; k++) {
+        final stepResult = _evaluateFormula(trace, f.operand, k);
+        if (stepResult.holds) {
+          return const EvaluationResult.success(); // Found a state where it holds
         }
-        return EvaluationResult.failure('Eventually failed: Operand never held.', relatedIndex: index); // Never held
+      }
+      return EvaluationResult.failure('Eventually failed: Operand never held.', relatedIndex: index); // Never held
 
     case Until<T> f:
-        if (index >= trace.length) return EvaluationResult.failure('Until evaluated on empty trace suffix.', relatedIndex: index);
-        for (var k = index; k < trace.length; k++) {
-           final rightResult = _evaluateFormula(trace, f.right, k);
-           if (rightResult.holds) {
-               // Check if left held from index up to k-1
-               for (var j = index; j < k; j++) {
-                   final leftResult = _evaluateFormula(trace, f.left, j);
-                   if (!leftResult.holds) {
-                       return EvaluationResult.failure('Until failed: Left operand failed before right held (${leftResult.reason ?? "Left failed"})', relatedIndex: j, relatedTimestamp: trace.events[j].timestamp);
-                   }
-               }
-               return const EvaluationResult.success(); // Right held, left held until then
-           }
-           // Right didn't hold at k, so left must hold at k to continue
-           final leftResult = _evaluateFormula(trace, f.left, k);
-           if (!leftResult.holds) {
-               return EvaluationResult.failure('Until failed: Left operand failed before right held (${leftResult.reason ?? "Left failed"})', relatedIndex: k, relatedTimestamp: trace.events[k].timestamp);
-           }
+      if (index >= trace.length)
+        return EvaluationResult.failure('Until evaluated on empty trace suffix.', relatedIndex: index);
+      for (var k = index; k < trace.length; k++) {
+        final rightResult = _evaluateFormula(trace, f.right, k);
+        if (rightResult.holds) {
+          // Check if left held from index up to k-1
+          for (var j = index; j < k; j++) {
+            final leftResult = _evaluateFormula(trace, f.left, j);
+            if (!leftResult.holds) {
+              return EvaluationResult.failure(
+                  'Until failed: Left operand failed before right held (${leftResult.reason ?? "Left failed"})',
+                  relatedIndex: j,
+                  relatedTimestamp: trace.events[j].timestamp);
+            }
+          }
+          return const EvaluationResult.success(); // Right held, left held until then
         }
-        return EvaluationResult.failure('Until failed: Right operand never held.', relatedIndex: index); // Right never held
+        // Right didn't hold at k, so left must hold at k to continue
+        final leftResult = _evaluateFormula(trace, f.left, k);
+        if (!leftResult.holds) {
+          return EvaluationResult.failure(
+              'Until failed: Left operand failed before right held (${leftResult.reason ?? "Left failed"})',
+              relatedIndex: k,
+              relatedTimestamp: trace.events[k].timestamp);
+        }
+      }
+      return EvaluationResult.failure('Until failed: Right operand never held.',
+          relatedIndex: index); // Right never held
 
-     // --- Default LTL definitions for W and R (can be overridden for efficiency) ---
-     case WeakUntil<T> f: // Defined as G(left) or (left U right)
-        final gLeft = Always<T>(f.left);
-        final lUr = Until<T>(f.left, f.right);
-        return _evaluateFormula(trace, Or<T>(gLeft, lUr), index);
+    // --- Default LTL definitions for W and R (can be overridden for efficiency) ---
+    case WeakUntil<T> f: // Defined as G(left) or (left U right)
+      final gLeft = Always<T>(f.left);
+      final lUr = Until<T>(f.left, f.right);
+      return _evaluateFormula(trace, Or<T>(gLeft, lUr), index);
 
-     case Release<T> f: // Defined as !(!left U !right)
-        final notLeft = Not<T>(f.left);
-        final notRight = Not<T>(f.right);
-        final notL_U_notR = Until<T>(notLeft, notRight);
-        return _evaluateFormula(trace, Not<T>(notL_U_notR), index);
+    case Release<T> f: // Defined as !(!left U !right)
+      final notLeft = Not<T>(f.left);
+      final notRight = Not<T>(f.right);
+      final notL_U_notR = Until<T>(notLeft, notRight);
+      return _evaluateFormula(trace, Not<T>(notL_U_notR), index);
 
-     default: // Add default case to satisfy non-nullable return type with unsealed Formula
-        throw UnimplementedError('Evaluation logic for formula type ${formula.runtimeType} not implemented in core evaluator.');
+    default: // Add default case to satisfy non-nullable return type with unsealed Formula
+      throw UnimplementedError(
+          'Evaluation logic for formula type ${formula.runtimeType} not implemented in core evaluator.');
   }
-} 
+}
 
 /// Evaluates an LTL formula on a given trace.
 ///
@@ -179,4 +207,4 @@ bool evaluateLtl<T>(Formula<T> formula, List<T> trace) {
   // Use the primary trace evaluator, starting at index 0.
   final result = evaluateTrace(timedTrace, formula);
   return result.holds;
-} 
+}

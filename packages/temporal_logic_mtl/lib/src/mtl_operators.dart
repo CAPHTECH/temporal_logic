@@ -4,12 +4,6 @@ import 'time_interval.dart';
 
 // --- MTL AST Nodes ---
 
-/// Base class for timed formulas (Could be used later if needed)
-// sealed class MtlFormula<T> extends Formula<T> {
-//   final TimeInterval interval;
-//   const MtlFormula(this.interval);
-// }
-
 /// Represents the timed eventually operator: F_I phi
 final class EventuallyTimed<T> extends Formula<T> {
   final Formula<T> operand;
@@ -53,8 +47,7 @@ final class UntilTimed<T> extends Formula<T> {
 ///
 /// [startIndex] specifies the index in the trace from which to start evaluation (usually 0).
 /// The evaluation result provides details on whether the formula holds and potentially why.
-EvaluationResult evaluateMtlTrace<T>(
-    Trace<T> trace, Formula<T> formula, {int startIndex = 0}) {
+EvaluationResult evaluateMtlTrace<T>(Trace<T> trace, Formula<T> formula, {int startIndex = 0}) {
   // Check for empty trace for certain operators early?
   // Or let recursive calls handle it.
   if (trace.isEmpty && startIndex == 0) {
@@ -65,16 +58,14 @@ EvaluationResult evaluateMtlTrace<T>(
 
   // Ensure startIndex is within reasonable bounds before recursion
   if (startIndex < 0 || startIndex > trace.length) {
-    return EvaluationResult.failure(
-        'Start index $startIndex out of bounds for trace length ${trace.length}');
+    return EvaluationResult.failure('Start index $startIndex out of bounds for trace length ${trace.length}');
   }
 
   return _evaluateRecursive(trace, formula, startIndex);
 }
 
 // Internal recursive evaluation function (Handles LTL and MTL)
-EvaluationResult _evaluateRecursive<T>(
-    Trace<T> trace, Formula<T> formula, int index) {
+EvaluationResult _evaluateRecursive<T>(Trace<T> trace, Formula<T> formula, int index) {
   // Base case: If index is beyond trace length, behavior depends on operator.
   // Handled within each operator case.
 
@@ -82,9 +73,7 @@ EvaluationResult _evaluateRecursive<T>(
   switch (formula) {
     case AtomicProposition<T> p:
       if (index >= trace.length)
-        return EvaluationResult.failure(
-            "Atomic proposition evaluated past trace end.",
-            relatedIndex: index);
+        return EvaluationResult.failure("Atomic proposition evaluated past trace end.", relatedIndex: index);
       final currentEvent = trace.events[index];
       final holds = p.pred(currentEvent.value);
       return EvaluationResult(holds,
@@ -95,9 +84,7 @@ EvaluationResult _evaluateRecursive<T>(
     case Not<T> f:
       final innerResult = _evaluateRecursive(trace, f.operand, index);
       return EvaluationResult(!innerResult.holds,
-          reason: innerResult.holds
-              ? 'Negated formula held'
-              : innerResult.reason,
+          reason: innerResult.holds ? 'Negated formula held' : innerResult.reason,
           relatedIndex: innerResult.relatedIndex,
           relatedTimestamp: innerResult.relatedTimestamp);
 
@@ -118,16 +105,14 @@ EvaluationResult _evaluateRecursive<T>(
 
     case Implies<T> f:
       final leftResult = _evaluateRecursive(trace, f.left, index);
-      if (!leftResult.holds)
-        return const EvaluationResult.success(); // Antecedent false -> implication holds
+      if (!leftResult.holds) return const EvaluationResult.success(); // Antecedent false -> implication holds
       // Antecedent true, result is the evaluation of the consequent
       return _evaluateRecursive(trace, f.right, index);
 
     case Next<T> f:
       final nextIndex = index + 1;
       if (nextIndex >= trace.length)
-        return EvaluationResult.failure('Next evaluated past trace end.',
-            relatedIndex: index);
+        return EvaluationResult.failure('Next evaluated past trace end.', relatedIndex: index);
       // Evaluate operand at the next index
       return _evaluateRecursive(trace, f.operand, nextIndex);
 
@@ -136,10 +121,8 @@ EvaluationResult _evaluateRecursive<T>(
         final stepResult = _evaluateRecursive(trace, f.operand, k);
         if (!stepResult.holds) {
           // Found a point where the operand fails
-          return EvaluationResult.failure(
-              'Always failed: ${stepResult.reason ?? "Operand failed"}',
-              relatedIndex: k,
-              relatedTimestamp: trace.events[k].timestamp);
+          return EvaluationResult.failure('Always failed: ${stepResult.reason ?? "Operand failed"}',
+              relatedIndex: k, relatedTimestamp: trace.events[k].timestamp);
         }
       }
       // Operand holds for all k >= index (or suffix is empty)
@@ -147,8 +130,7 @@ EvaluationResult _evaluateRecursive<T>(
 
     case Eventually<T> f: // F phi
       if (index >= trace.length)
-        return EvaluationResult.failure(
-            'Eventually evaluated on empty trace suffix.',
+        return EvaluationResult.failure('Eventually evaluated on empty trace suffix.',
             relatedIndex: index); // F phi is false on empty suffix
       for (var k = index; k < trace.length; k++) {
         final stepResult = _evaluateRecursive(trace, f.operand, k);
@@ -158,14 +140,11 @@ EvaluationResult _evaluateRecursive<T>(
       }
       // Operand never holds for k >= index
       return EvaluationResult.failure('Eventually failed: Operand never held.',
-          relatedIndex: index,
-          relatedTimestamp:
-              trace.events.isNotEmpty ? trace.events[index].timestamp : null);
+          relatedIndex: index, relatedTimestamp: trace.events.isNotEmpty ? trace.events[index].timestamp : null);
 
     case Until<T> f: // left U right
       if (index >= trace.length)
-        return EvaluationResult.failure('Until evaluated on empty trace suffix.',
-            relatedIndex: index);
+        return EvaluationResult.failure('Until evaluated on empty trace suffix.', relatedIndex: index);
       for (var k = index; k < trace.length; k++) {
         final rightResult = _evaluateRecursive(trace, f.right, k);
         if (rightResult.holds) {
@@ -195,9 +174,7 @@ EvaluationResult _evaluateRecursive<T>(
       }
       // Loop finished: Right never held
       return EvaluationResult.failure('Until failed: Right operand never held.',
-          relatedIndex: index,
-          relatedTimestamp:
-              trace.events.isNotEmpty ? trace.events[index].timestamp : null);
+          relatedIndex: index, relatedTimestamp: trace.events.isNotEmpty ? trace.events[index].timestamp : null);
 
     case WeakUntil<T> f: // left W right === G(left) or (left U right)
       // Evaluate G(left)
@@ -225,9 +202,7 @@ EvaluationResult _evaluateRecursive<T>(
     case EventuallyTimed<T> f: // F_I phi
       final interval = f.interval;
       if (index >= trace.length)
-        return EvaluationResult.failure(
-            'EventuallyTimed evaluated on empty trace suffix.',
-            relatedIndex: index);
+        return EvaluationResult.failure('EventuallyTimed evaluated on empty trace suffix.', relatedIndex: index);
       final startTime = trace.events[index].timestamp;
       for (var k = index; k < trace.length; k++) {
         final currentTime = trace.events[k].timestamp;
@@ -246,15 +221,12 @@ EvaluationResult _evaluateRecursive<T>(
         }
       }
       // No point k found within interval where operand holds
-      return EvaluationResult.failure(
-          'EventuallyTimed failed: Operand never held within $interval.',
-          relatedIndex: index,
-          relatedTimestamp: trace.events[index].timestamp);
+      return EvaluationResult.failure('EventuallyTimed failed: Operand never held within $interval.',
+          relatedIndex: index, relatedTimestamp: trace.events[index].timestamp);
 
     case AlwaysTimed<T> f: // G_I phi
       final interval = f.interval;
-      if (index >= trace.length)
-        return const EvaluationResult.success(); // G_I phi is vacuously true on empty suffix
+      if (index >= trace.length) return const EvaluationResult.success(); // G_I phi is vacuously true on empty suffix
 
       final startTime = trace.events[index].timestamp;
       bool relevantPointChecked = false;
@@ -286,9 +258,7 @@ EvaluationResult _evaluateRecursive<T>(
     case UntilTimed<T> f: // left U_I right
       final interval = f.interval;
       if (index >= trace.length)
-        return EvaluationResult.failure(
-            'UntilTimed evaluated on empty trace suffix.',
-            relatedIndex: index);
+        return EvaluationResult.failure('UntilTimed evaluated on empty trace suffix.', relatedIndex: index);
 
       final startTime = trace.events[index].timestamp;
 
@@ -331,24 +301,20 @@ EvaluationResult _evaluateRecursive<T>(
         // Optimization: If we are past the interval, and haven't found a suitable k yet,
         // we can stop searching for a k *within* the interval.
         if (timeOffsetK > interval.upperBound) {
-            break;
+          break;
         }
-
       }
       // Loop finished: Right never held within the interval while Left held
-      return EvaluationResult.failure(
-          'UntilTimed failed: Right operand never held within $interval while Left held.',
-          relatedIndex: index,
-          relatedTimestamp: trace.events[index].timestamp);
+      return EvaluationResult.failure('UntilTimed failed: Right operand never held within $interval while Left held.',
+          relatedIndex: index, relatedTimestamp: trace.events[index].timestamp);
 
-     default:
-       // Should not happen if all Formula subtypes are handled
-       throw UnimplementedError('Evaluation logic for formula type ${formula.runtimeType} not implemented.');
-
+    default:
+      // Should not happen if all Formula subtypes are handled
+      throw UnimplementedError('Evaluation logic for formula type ${formula.runtimeType} not implemented.');
   }
 }
 
-// --- Deprecated Standalone Check Functions --- 
+// --- Deprecated Standalone Check Functions ---
 
 /// [DEPRECATED: Use evaluateMtlTrace] Checks if the formula [operand] holds eventually within the [interval]
 /// for the given timed [trace].
@@ -359,7 +325,8 @@ EvaluationResult _evaluateRecursive<T>(
 bool checkEventuallyWithin<S>(
     Trace<S> trace, // Use Trace from core
     TimeInterval interval,
-    AtomicProposition<S> operand) { // Use AtomicProposition
+    AtomicProposition<S> operand) {
+  // Use AtomicProposition
   if (trace.isEmpty) return false;
   final startTime = trace.events.first.timestamp;
 
@@ -370,7 +337,8 @@ bool checkEventuallyWithin<S>(
     // Check if the current time point is within the interval
     if (interval.contains(timeOffset)) {
       // Evaluate the proposition directly on the state at time i
-      if (operand.pred(trace.events[i].value)) { // Call pred directly
+      if (operand.pred(trace.events[i].value)) {
+        // Call pred directly
         return true; // Found a time point satisfying the operand within the interval
       }
     }
@@ -388,19 +356,13 @@ bool checkEventuallyWithin<S>(
 bool checkAlwaysWithin<S>(
     Trace<S> trace, // Use Trace from core
     TimeInterval interval,
-    AtomicProposition<S> operand) { // Use AtomicProposition
-  print('\n--- checkAlwaysWithin START ---');
-  print('Trace: $trace');
-  print('Interval: $interval');
-  print('Operand: checking for ${operand.name ?? operand.pred}'); // Use name or pred
+    AtomicProposition<S> operand) {
+  // Use AtomicProposition
 
   if (trace.isEmpty) {
-    print('Trace is empty, returning true (vacuously true).');
-    print('--- checkAlwaysWithin END ---');
     return true;
   }
   final startTime = trace.events.first.timestamp;
-  print('Start Time: $startTime');
 
   bool relevantPointChecked = false; // Track if any point in interval was checked
 
@@ -409,33 +371,24 @@ bool checkAlwaysWithin<S>(
     final currentTime = currentEvent.timestamp;
     final currentValue = currentEvent.value;
     final timeOffset = currentTime - startTime;
-    print('[i=$i] Current: ${currentValue} at $currentTime (Offset: $timeOffset)');
 
     // Only check points *within* the interval
     final isInInterval = interval.contains(timeOffset);
-    print('[i=$i] Is offset $timeOffset in interval $interval? $isInInterval');
 
     if (isInInterval) {
       relevantPointChecked = true; // Mark that we checked at least one point
       final operandResult = operand.pred(currentValue); // Call pred directly
-      print('[i=$i] Operand evaluation on $currentValue: $operandResult');
       if (!operandResult) {
-        print('[i=$i] Operand violated within interval. Returning false.');
-        print('--- checkAlwaysWithin END ---');
         return false; // Found a time point violating the operand within the interval
       }
     }
     // Optimization: If current time is already past the upper bound
     if (timeOffset > interval.upperBound) {
-      print('[i=$i] Offset $timeOffset exceeds interval upper bound ${interval.upperBound}. Breaking loop.');
       break;
     }
   }
-  print('Loop finished.');
   // If we checked at least one point and found no violations, return true.
   // If no points were in the interval, G_I p is vacuously true.
-  print(relevantPointChecked ? 'Checked relevant points, returning true.' : 'No relevant points in interval, returning true (vacuously).');
-  print('--- checkAlwaysWithin END ---');
   return true; // Either no violation found or interval was effectively empty for the trace
 }
 
@@ -451,7 +404,8 @@ bool checkUntilWithin<S>(
     Trace<S> trace, // Use Trace from core
     TimeInterval interval,
     AtomicProposition<S> left, // Use AtomicProposition
-    AtomicProposition<S> right) { // Use AtomicProposition
+    AtomicProposition<S> right) {
+  // Use AtomicProposition
   if (trace.isEmpty) return false;
   final startTime = trace.events.first.timestamp;
 
@@ -487,10 +441,10 @@ bool checkUntilWithin<S>(
     // Let's stick to checking all k. If we pass the interval without right holding within it,
     // the loop will finish, and we'll return false.
     // Optimization: If timeOffsetK > interval.upperBound, no *future* k can satisfy the interval condition.
-     if (timeOffsetK > interval.upperBound) {
-       // We haven't found a k within the interval where right holds yet.
-       break;
-     }
+    if (timeOffsetK > interval.upperBound) {
+      // We haven't found a k within the interval where right holds yet.
+      break;
+    }
   }
 
   return false; // No satisfying sequence found
@@ -500,4 +454,4 @@ bool checkUntilWithin<S>(
 
 // Add other variants as needed, e.g., eventuallyAtLeast, eventuallyBetween, etc.
 // Note: If adding non-conflicting convenience functions, consider giving them
-// unique names like `eventuallyUpTo`, `alwaysUpTo`, `untilUpTo` to avoid ambiguity. 
+// unique names like `eventuallyUpTo`, `alwaysUpTo`, `untilUpTo` to avoid ambiguity.

@@ -4,8 +4,7 @@ import 'ast.dart';
 
 /// Creates an atomic proposition based on a state predicate.
 /// Alias for constructing an [AtomicProposition] formula.
-AtomicProposition<T> state<T>(bool Function(T state) pred, {String? name}) =>
-    AtomicProposition<T>(pred, name: name);
+AtomicProposition<T> state<T>(bool Function(T state) pred, {String? name}) => AtomicProposition<T>(pred, name: name);
 
 /// Creates an atomic proposition [Formula] based on an event predicate.
 ///

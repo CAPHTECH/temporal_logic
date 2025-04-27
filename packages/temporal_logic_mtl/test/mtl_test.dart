@@ -31,15 +31,11 @@ void main() {
     final trace = Trace([v0, v1, v2, v3]); // Use Trace constructor
 
     test('Properties (length, isEmpty, first, last)', () {
-      // Removed duration test
       expect(trace.isEmpty, isFalse);
       expect(trace.length, 4);
-      expect(trace.events.first, v0); // Access events list
-      expect(trace.events.last, v3); // Access events list
-      // Duration isn't a direct property of Trace, calculate if needed:
-      // expect(trace.events.last.timestamp - trace.events.first.timestamp, const Duration(seconds: 2));
+      expect(trace.events.first, v0);
+      expect(trace.events.last, v3);
       expect(Trace.empty().isEmpty, isTrue);
-      // Duration test removed for empty trace too
     });
 
     test('Indexer access via events list', () {
@@ -48,19 +44,10 @@ void main() {
       expect(() => trace.events[4], throwsRangeError);
     });
 
-    // subTrace is not a method on Trace in core package. Remove test.
-    // test('subTrace correctly adjusts timestamps', () { ... });
-    // test('subTrace handles edge cases', () { ... });
-
     test('Trace constructor allows monotonic timestamps', () {
-      // Assertion logic is now internal to Trace constructor if implemented.
-      // Test creation instead of assertion.
       expect(() => Trace([v1, v0]), throwsA(isA<AssertionError>())); // Assuming core Trace asserts
       expect(() => Trace([v0, v1]), returnsNormally);
     });
-
-    // Helper to extract states if needed (core doesn't have statesSublist)
-    List<T> getStates<T>(Trace<T> t) => t.events.map((e) => e.value).toList();
   });
 
   group('TimeInterval', () {
@@ -120,7 +107,6 @@ void main() {
       expect(evalM(trace, p1.not()).holds, isTrue);
     });
 
-    // Add tests for LTL operators using evaluateMtlTrace if needed
     test('LTL Temporal Operators (Next, Eventually, Always)', () {
       final p1_at_1 = state<int>((s) => s == 1);
       final p2_at_2 = state<int>((s) => s == 2);
@@ -235,7 +221,5 @@ void main() {
               .holds,
           isFalse);
     });
-
-    // Add tests for nested formulas if needed
   });
 }

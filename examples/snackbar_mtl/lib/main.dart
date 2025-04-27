@@ -65,11 +65,6 @@ class _MyHomePageState extends ConsumerState<MyHomePage> {
     Duration.zero,
     const Duration(milliseconds: 2500), // 2.5 seconds
   );
-  // Remove or comment out the interval for the second check as it's replaced
-  // static final intervalHiddenWait = temporal_mtl.TimeInterval(
-  //   Duration.zero,
-  //   const Duration(milliseconds: 5000), // Extend to 5 seconds
-  // );
 
   // Stream controller for TimedValue
   late StreamController<temporal_core.TimedValue<SnackbarState>> _snackbarStreamController;
@@ -99,7 +94,6 @@ class _MyHomePageState extends ConsumerState<MyHomePage> {
       if (next > (previous ?? 0)) {
         // --- Add TimedValue when snackbar should be shown ---
         final showTime = _stopwatch.elapsed;
-        print('Adding visible state at $showTime'); // Debug
         _snackbarStreamController.add(temporal_core.TimedValue(SnackbarState.visible, showTime));
 
         ScaffoldMessenger.of(context).hideCurrentSnackBar();
@@ -115,7 +109,6 @@ class _MyHomePageState extends ConsumerState<MyHomePage> {
           // We don't need to check the riverpod state anymore
           // Just record that it became hidden at this time
           final hideTime = _stopwatch.elapsed;
-          print('Adding hidden state at $hideTime'); // Debug
           // Only add if controller is still active
           if (mounted && !_snackbarStreamController.isClosed) {
             _snackbarStreamController.add(temporal_core.TimedValue(SnackbarState.hidden, hideTime));
@@ -174,7 +167,6 @@ class _MyHomePageState extends ConsumerState<MyHomePage> {
                 style: TextStyle(fontWeight: FontWeight.bold),
               ),
               const Text('Is "hidden" state reached within 2.5s of start?'),
-              // MOVE Check 1 Widget Here
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: 8.0), // Add padding
                 child: Tooltip(
@@ -195,7 +187,6 @@ class _MyHomePageState extends ConsumerState<MyHomePage> {
                 style: TextStyle(fontWeight: FontWeight.bold),
               ),
               const Text('Is "hidden" state maintained for 1s once entered?'),
-              // MOVE Check 2 Widget Here
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: 8.0), // Add padding
                 child: Tooltip(
