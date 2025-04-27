@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:temporal_logic_core/temporal_logic_core.dart' show TimedValue;
-import 'stream_sustained_state_checker.dart';
+
 import 'check_status.dart';
+import 'stream_sustained_state_checker.dart';
 
 /// A widget that observes a [stream] of timed states [TimedValue<S>] and
 /// displays the result of checking if a [targetState] is sustained for a
@@ -26,12 +27,10 @@ class SustainedStateCheckerWidget<S> extends StatefulWidget {
   });
 
   @override
-  State<SustainedStateCheckerWidget<S>> createState() =>
-      _SustainedStateCheckerWidgetState<S>();
+  State<SustainedStateCheckerWidget<S>> createState() => _SustainedStateCheckerWidgetState<S>();
 }
 
-class _SustainedStateCheckerWidgetState<S>
-    extends State<SustainedStateCheckerWidget<S>> {
+class _SustainedStateCheckerWidgetState<S> extends State<SustainedStateCheckerWidget<S>> {
   late StreamSustainedStateChecker<S> _checker;
 
   @override
@@ -84,7 +83,6 @@ class _SustainedStateCheckerWidgetState<S>
         tooltip = 'State Not Sustained';
         break;
       case CheckStatus.pending:
-      default: // Treat pending and unknown the same for icon
         icon = Icons.hourglass_empty;
         color = Colors.orange;
         tooltip = 'Sustained Check Pending';

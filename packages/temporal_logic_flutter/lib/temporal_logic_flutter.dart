@@ -29,16 +29,16 @@ export 'package:temporal_logic_core/temporal_logic_core.dart'
         eventually,
         until,
         weakUntil,
-        release,
-        LogicalConnectives;
-
+        release;
 export 'package:temporal_logic_mtl/temporal_logic_mtl.dart'
-    show
-        TimeInterval,
-        evaluateMtlTrace,
-        EventuallyTimed,
-        AlwaysTimed,
-        UntilTimed;
+    show TimeInterval, evaluateMtlTrace, EventuallyTimed, AlwaysTimed, UntilTimed;
+
+export 'src/check_status.dart'; // Export the new status enum
+// Widgets
+export 'src/ltl_checker_widget.dart';
+// Test Matchers
+export 'src/matchers.dart';
+export 'src/mtl_checker_widget.dart'; // Export the new MTL widget
 // Also exports EvaluationResult, Trace, etc. implicitly from core export
 
 // --- Flutter Specific Components ---
@@ -47,16 +47,7 @@ export 'package:temporal_logic_mtl/temporal_logic_mtl.dart'
 export 'src/stream_ltl_checker.dart';
 export 'src/stream_mtl_checker.dart';
 export 'src/stream_sustained_state_checker.dart';
-export 'src/check_status.dart'; // Export the new status enum
-
-// Widgets
-export 'src/ltl_checker_widget.dart';
 export 'src/sustained_state_checker_widget.dart';
-export 'src/mtl_checker_widget.dart'; // Export the new MTL widget
-
-// Test Matchers
-export 'src/matchers.dart';
-
 // Trace Recorder
 export 'src/trace_recorder.dart';
 

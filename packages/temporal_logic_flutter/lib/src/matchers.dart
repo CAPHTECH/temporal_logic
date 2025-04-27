@@ -1,6 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:temporal_logic_core/temporal_logic_core.dart';
-import 'package:temporal_logic_mtl/temporal_logic_mtl.dart'; // Assuming evaluateTrace and EvaluationResult exist
 
 /// A matcher that checks if a [Trace] satisfies a given [Formula].
 ///
@@ -60,9 +59,7 @@ class _SatisfiesLtlMatcher<T> extends Matcher {
 
   @override
   Description describe(Description description) {
-    return description
-        .add('satisfies temporal logic formula\n  Formula: ')
-        .addDescriptionOf(formula);
+    return description.add('satisfies temporal logic formula\n  Formula: ').addDescriptionOf(formula);
   }
 
   @override
@@ -80,21 +77,16 @@ class _SatisfiesLtlMatcher<T> extends Matcher {
           .addDescriptionOf(matchState['stackTrace']);
     } else if (matchState.containsKey('evaluationResult')) {
       final result = matchState['evaluationResult'] as EvaluationResult;
-      mismatchDescription
-          .add('evaluation resulted in ${result.holds ? 'true' : 'false'}\n');
+      mismatchDescription.add('evaluation resulted in ${result.holds ? 'true' : 'false'}\n');
       if (!result.holds && result.reason != null) {
         mismatchDescription.add('Reason: ${result.reason}\n');
       }
       if (verbose && matchState.containsKey('traceLength')) {
-        mismatchDescription.add(
-            'Evaluated on trace of length ${matchState['traceLength']}.\n');
+        mismatchDescription.add('Evaluated on trace of length ${matchState['traceLength']}.\n');
         // Potentially add more trace details if EvaluationResult provides them
       }
     } else if (matchState.containsKey('itemType')) {
-      mismatchDescription
-          .add('was type ')
-          .add(matchState['itemType'])
-          .add(' but expected a Trace<$T> or List<$T>.');
+      mismatchDescription.add('was type ').add(matchState['itemType']).add(' but expected a Trace<$T> or List<$T>.');
     } else {
       mismatchDescription.add('did not match for an unknown reason.');
     }
