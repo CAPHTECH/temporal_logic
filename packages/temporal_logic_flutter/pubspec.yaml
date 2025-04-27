@@ -25,3 +25,5 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
   lints: ^5.1.1 # Keep consistent with core
+
+resolution: workspace
