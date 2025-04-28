@@ -77,9 +77,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:login_flow_ltl_example/main.dart'; // あなたのアプリ
-import 'package:temporal_logic_core/temporal_logic_core.dart' as tlCore;
-import 'package:temporal_logic_flutter/temporal_logic_flutter.dart'
-    as tlFlutter;
+import 'package:temporal_logic_core/temporal_logic_core.dart';
+import 'package:temporal_logic_flutter/temporal_logic_flutter.dart';
 
 // 検証対象のアプリケーション状態のスナップショットを表します。
 // 不変で、==/hashCode を実装する必要があります。
@@ -111,7 +110,7 @@ class AppSnap {
 void main() {
   testWidgets('Successful login flow satisfies LTL formula', (tester) async {
     // 1. セットアップ： 状態のスナップショットを時間経過とともにキャプチャするためのレコーダーを作成。
-    final recorder = tlFlutter.TraceRecorder<AppSnap>();
+    final recorder = TraceRecorder<AppSnap>();
     final container = ProviderContainer(); // Riverpod による状態管理を仮定
     addTearDown(container.dispose);
     recorder.initialize(); // タイムトラッキングを開始
@@ -142,13 +141,13 @@ void main() {
     // 5. プロポジションの定義： AppSnapに関する基本的な真偽の陈述。
     // 期間にわたって成立する条件には `state` を使用します。
     final loading =
-        tlCore.state<AppSnap>((s) => s.isLoading, name: 'loading');
+        state<AppSnap>((s) => s.isLoading, name: 'loading');
     final home =
-        tlCore.state<AppSnap>((s) => s.isOnHomeScreen, name: 'home');
-    final error = tlCore.state<AppSnap>((s) => s.hasError, name: 'error');
+        state<AppSnap>((s) => s.isOnHomeScreen, name: 'home');
+    final error = state<AppSnap>((s) => s.hasError, name: 'error');
     // `event` を、特定の時点(通常はトランジションのトリガー)を示す条件に使用します。
     final loginClicked =
-        tlCore.event<AppSnap>((s) => s.loginClicked, name: 'loginClicked');
+        event<AppSnap>((s) => s.loginClicked, name: 'loginClicked');
 
     // 6. LTL 式を定義： 期待される時系列の動作を指定します。
     // 「グローバルに (G)、loginClickedが発生した場合、必ず (->)
@@ -156,15 +155,14 @@ void main() {
     //  最終的に (F) ホーム画面に到達し、かつ
     //  グローバルに (G) エラーが発生しない。」
     // G(loginClicked -> (X loading && F home && G ！error))
-    final formula = tlCore.always(loginClicked.implies(tlCore
-        .next(loading)
-        .and(tlCore.eventually(home))
-        .and(tlCore.always(error.not()))));
+    final formula = always(loginClicked.implies(next(loading)
+        .and(eventually(home))
+        .and(always(error.not()))));
 
     // 7. 検証： 記録されたAppSnapsのシーケンス(トレース)が式を満たすかどうかを確認する。
     final trace = recorder.trace;
     // temporal_logic_flutter からカスタムマッチャーを使用
-    expect(trace, tlFlutter.satisfiesLtl(formula)); // または satisfiesMtl
+    expect(trace, satisfiesLtl(formula)); // または satisfiesMtl
   });
 }
 ```
@@ -196,18 +194,18 @@ void main() {
 
 時制論理式は、単一の状態スナップショット(`AppSnap`)に関する真/偽の根本的な主張である**原子命題**を基盤としています。重要な点は、条件が継続的な*状態*を表すか、一時的な*イベント*を表すかを判断することです。
 
-- **`tlCore.state<T>(Predicate<T> predicate， ｛String？ name｝)`**：
+- **`state<T>(Predicate<T> predicate， ｛String？ name｝)`**：
 - **目的： アプリケーションが特定の構成またはフェーズ(期間)にある間、条件が成立する`AtomicProposition`を作成します。
   - **`predicate`： 状態スナップショット `state` が条件を満たす場合に `true` を返す関数 `(T state) => bool`。
 - **`name`： デバッグ用のオプションの説明名。
-- **例： `final isLoading = tlCore.state<AppSnap>((s) => s.isLoading， name： 'Is Loading')；`
+- **例： `final isLoading = state<AppSnap>((s) => s.isLoading， name： 'Is Loading')；`
   - **関連項目：** セクション3 - 命題： `state` と `event` の概念的な詳細。
 
-- **`tlCore.event<T>(Predicate<T> predicate， ｛String？ name｝)`**：
+- **`event<T>(Predicate<T> predicate， ｛String？ name｝)`**：
 - **目的： 特定の時点での発生またはトリガーを表す `AtomicProposition` を作成します。
   - **`predicate`： `(T state) => bool` 型の関数で、状態のスナップショット `state` がイベントの発生を表す場合、`true` を返します。通常、この述語は特定の スナップショット用に設定された一時的なフラグをチェックします。
 - **`name`： デバッグ用のオプションの説明名。
-  - **例： `final loginClicked = tlCore.event<AppSnap>((s) => s.loginClicked， name： 'Login Clicked Event')；`
+  - **例： `final loginClicked = event<AppSnap>((s) => s.loginClicked， name： 'Login Clicked Event')；`
 - **関連項目： セクション 3 - 命題： `state` と `event` および セクション 5 - 一時的なイベントの処理で、概念的および実践的な詳細を確認してください。
 
 **`state` と `event` の選択：
@@ -280,29 +278,29 @@ MTL は LTL に明示的な時間制約を時制演算子に追加し、物事�
 
 これらは、時間経過に伴う状態のシーケンスについて推論する基本的な時制演算子です。
 
-- **`formula.next()`** または `tlCore.next(formula)`:
+- **`formula.next()`** または `next(formula)`:
   - **シンボル:** X `formula`
   - **意味:** `formula` は、トレース内の*直後の*状態において真でなければならない。現在の状態がトレースの最終状態の場合、`next` は通常偽とみなされる(次の状態が存在しないため)。
-  - **例:** `requestSent.implies(tlCore.next(responsePending))` (リクエストが送信された場合、次の状態ではレスポンスが待機中である必要がある)。
+  - **例:** `requestSent.implies(next(responsePending))` (リクエストが送信された場合、次の状態ではレスポンスが待機中である必要がある)。
 
-- **`formula.always()`** または `tlCore.always(formula)`:
+- **`formula.always()`** または `always(formula)`:
   - **シンボル:** G `formula`
   - **意味論:** `formula` は、トレース内の *現在の* 状態および *以降のすべての* 状態において、トレースの終了まで真でなければならない。
-  - **例:** `loggedIn.implies(tlCore.always(sessionValid))` (ログイン後、セッションはトレースの残りの期間中有効でなければならない)。
+  - **例:** `loggedIn.implies(always(sessionValid))` (ログイン後、セッションはトレースの残りの期間中有効でなければならない)。
   - **一般的な用途:** 安全性を表現するプロパティや不変条件(悪いことが決して起こらないことを保証する)。
 
-- **`formula.eventually()`** または `tlCore.eventually(formula)`:
+- **`formula.eventually()`** または `eventually(formula)`:
   - **シンボル:** F `formula`
   - **意味:** `formula` は、トレース内のいずれかの時点(現在の状態または将来の状態)で真でなければならない。
-  - **例:** `buttonPressed.implies(tlCore.eventually(operationComplete))` (ボタンが押された場合、操作は後で完了しなければならない)。
+  - **例:** `buttonPressed.implies(eventually(operationComplete))` (ボタンが押された場合、操作は後で完了しなければならない)。
   - **一般的な用途:** 生存性プロパティの表現(良いことが最終的に起こるべきである)。
 
-- **`formula1.until(formula2)`** または `tlCore.until(formula1, formula2)`:
+- **`formula1.until(formula2)`** または `until(formula1, formula2)`:
   - **シンボル:** `formula1` U `formula2`
   - **意味:** `formula1` は、現在の状態から *少なくとも* `formula2` が真になる状態まで継続的に真でなければならない。重要な点は、`formula2` は*必ず* 現在の状態以降に真になる必要がある。
   - **例:** `waitingForInput.until(inputReceived)` ('waiting'状態が'inputReceived'が真になるまで継続的に維持され、かつ'inputReceived'は最終的に発生しなければならない)。
 
-- **`formula1.release(formula2)`** または `tlCore.release(formula1, formula2)`:
+- **`formula1.release(formula2)`** または `release(formula1, formula2)`:
   - **シンボル:** `formula1` R `formula2`
   - **意味:** `formula2` は、現在の状態から *および含む* `formula1` が初めて真になる時点まで、継続的に真でなければならない。`formula1` がトレースの残りの部分で真にならない場合、`formula2` はトレースの残りの全期間にわたって真でなければならない。`formula2` は、`formula1` が真になるまで(`formula1` が真になる場合)*少なくとも* 真でなければなりません。これは `until` の論理的双対です。
   - **例:** `errorOccurred.release(operationInProgress)` (操作はエラーが発生するまで少なくとも 'in progress' の状態を維持する必要があります。エラーが発生しない場合、操作は 'in progress' の状態を維持し続けます。) 通常、条件(`formula2`)が、ある解放条件(`formula1`)が発生するまで成立しなければならないことを表すために使用されます。
@@ -311,18 +309,18 @@ MTL は LTL に明示的な時間制約を時制演算子に追加し、物事�
 
 これらのファクトリ関数は、`AtomicProposition`インスタンスを作成する主な方法であり、式の基本構成要素を形成します。
 
-- **`tlCore.state<T>(Predicate<T> predicate， ｛String？ name｝)`**：
+- **`state<T>(Predicate<T> predicate， ｛String？ name｝)`**：
   - **目的： アプリケーションが特定の構成またはフェーズ(期間)にある間、条件が成立する`AtomicProposition` を作成します。
 - **`predicate`： 状態スナップショット `state` が条件を満たす場合、`true` を返す関数 `(T state) => bool`。
 - **`name`： デバッグ用のオプションの説明名。
-  - **例： `final isLoading = tlCore.state<AppSnap>((s) => s.isLoading， name： 'Is Loading')；`
+  - **例： `final isLoading = state<AppSnap>((s) => s.isLoading， name： 'Is Loading')；`
 - **関連項目： セクション 3 - 命題： `state` と `event` の概念的な違い。
 
-- **`tlCore.event<T>(Predicate<T> predicate， ｛String？ name｝)`**：
+- **`event<T>(Predicate<T> predicate， ｛String？ name｝)`**：
   - **目的： 特定の時点での発生またはトリガーを表す `AtomicProposition` を作成します。
 - **`predicate`： `(T state) => bool` 型の関数で、状態のスナップショット `state` がイベントの発生を表す場合、`true` を返します。通常、このプレディケートは、特定の スナップショット用に設定された一時的なフラグをチェックします。
   - **`name`： デバッグ用のオプションの説明名。
-- **例： `final loginClicked = tlCore.event<AppSnap>((s) => s.loginClicked， name： 'Login Clicked Event')；`
+- **例： `final loginClicked = event<AppSnap>((s) => s.loginClicked， name： 'Login Clicked Event')；`
 - **関連項目： セクション 3 - 命題： `state` と `event` および セクション 5 - 一時的なイベントの処理で、概念的および実践的な詳細を確認してください。
 
 ### `temporal_logic_mtl` API
@@ -348,12 +346,12 @@ MTL は LTL に明示的な時間制約を時制演算子に追加し、物事�
 
 これらの演算子は、LTL の対応する演算子(`always`、`eventually`)に `TimeInterval` 制約を追加して拡張します。
 
-- **`formula.alwaysTimed(interval)`** または `tlMtl.alwaysTimed(formula， interval)`：
+- **`formula.alwaysTimed(interval)`** または `alwaysTimed(formula， interval)`：
 - **シンボル：** G[`interval`] `formula`(例： G[0， 5s] `formula`)
   - **意味論： `formula` は、トレース内のタイムスタンプ `t_future` が `t_current + interval.start <= t_future < t_current + interval.end` を満たすすべての将来の状態において真でなければなりません(`interval` のフラグに基づいて包含性を調整します)。インターバル内に状態が存在しない場合、オペレーターは空虚に真です。
   - **例：** `dataFetched.implies(loadingIndicatorVisible.not().alwaysTimed(TimeInterval(Duration.zero， Duration(seconds： 1))))` (データが取得された場合、取得後 0 秒から 1 秒までのインターバル全体において、ローディングインジケーターは *表示されてはならない*)。
 
-- **`formula.eventuallyTimed(interval)`** または `tlMtl.eventuallyTimed(formula， interval)`：
+- **`formula.eventuallyTimed(interval)`** または `eventuallyTimed(formula， interval)`：
 - **シンボル：** F[`interval`] `formula` (例： F[2s， 5s] `formula`)
   - **意味： `formula` は、トレース内のタイムスタンプ `t_future` が `t_current + interval.start <= t_future < t_current + interval.end` を満たす *少なくとも1つの* 将来の状態において真でなければならない(包含性を考慮して調整)。インターバル内の状態が式を満たさない場合、またはインターバル内に状態が存在しない場合、オペレーターは偽となる。
   - **例：** `requestSent.implies(responseReceived.eventuallyTimed(TimeInterval(Duration.zero， Duration(seconds： 3))))` (リクエストが送信された場合、3秒以内にレスポンスが受信されなければならない)。
@@ -408,11 +406,11 @@ Flutter 統合用に設計されたヘルパークラスです。実行中のア
 
 ```dart
 final trace = recorder.trace;
-final ltlFormula = tlCore.always(isSuccess.implies(isError.not()));
-expect(trace, tlFlutter.satisfiesLtl(ltlFormula));
+final ltlFormula = always(isSuccess.implies(isError.not()));
+expect(trace, satisfiesLtl(ltlFormula));
 
 // 否定形も可能です：
-expect(failedTrace, isNot(tlFlutter.satisfiesLtl(ltlFormula)));
+expect(failedTrace, isNot(satisfiesLtl(ltlFormula)));
 ```
 
 - **失敗時の出力：** マッチが失敗した場合、通常は説明的なエラーメッセージが提供され、多くの場合、基盤となる `EvaluationResult` から理由を含み、トレース内で式が違反した場所と理由を示します。
@@ -498,9 +496,9 @@ void main() {
 
     // --- 検証 ---
     final trace = recorder.trace;
-    final formula = tlCore.always(/* ... あなたの LTL/MTL 式 ... */);
+    final formula = always(/* ... あなたの LTL/MTL 式 ... */);
 
-    expect(trace, tlFlutter.satisfiesLtl(formula));
+    expect(trace, satisfiesLtl(formula));
 
     // レコーダーは必要に応じてaddTearDown経由で自動的に破棄されますが、
     // コンテナの破棄が通常より重要な部分です。
@@ -610,45 +608,45 @@ class AppSnap extends Equatable {
 
 - **レスポンス(最終的に)：**「ある条件(`request`)は、最終的に別の条件(`response`)に続く必要があります。」
 - **意味：`request`が発生した場合、システムは`response`がいつか発生することを保証します。*いつ*ではなく、*必ず*発生することを示しています。
-  - **式：** `tlCore.always(request.implies(tlCore.eventually(response)))`
+  - **式：** `always(request.implies(eventually(response)))`
 - **LTL：** `G(request -> F response)`
 - **使用例：** アクションが期待される結果に導くことを検証する(例： データの送信が最終的に成功確認に導く、確認応答が受信されるなど)
 
 - **応答(次)： "`request`が発生した場合、`response`は次の状態において必ず発生しなければならない。」
 - **意味： 効果(`response`)は、原因(`request`)に続く状態遷移において即時でなければならない。
-- **式： `tlCore.always(request.implies(tlCore.next(response)))`
+- **式： `always(request.implies(next(response)))`
 - **LTL： `G(request -> X response)`
   - **使用例： 同期アクション後の即時状態更新のテスト(例： ボタンをクリックするとすぐに別の機能が有効になる)。
 
 - **安全(Never / Invariant)： "特定の望ましくない状態(`errorState`)は決して発生してはならない。」
 - **意味： 式がチェックされる時点から実行トレース全体において、`errorState` 条件は常に false でなければならない。
-  - **式：** `tlCore.always(errorState.not())`
+  - **式：** `always(errorState.not())`
 - **LTL：** `G(！errorState)`
 - **使用例：** 重要な安全制約を強制し、禁止状態が到達不能であることを保証する(例： ユーザーは管理画面を表示してはならない、システムはデッドロック状態に陥ってはならない)。
 
 - **生存性(最終的に)： "アクションがトリガーされた場合、その完了は最終的に発生しなければならない。」
 - **意味： アクションが発生した後、システムは最終的に進捗し、完了状態に達しなければならない。これは終了または最終的な成功を保証する。
-- **式： `tlCore.always(action.implies(tlCore.eventually(completion)))`
+- **式： `always(action.implies(eventually(completion)))`
   - **LTL：** `G(action -> F completion)`
 - **使用例： プロセスが停止しないことを保証し、リクエストが最終的に処理され、進行状況インジケーターが最終的に消える。
 
 - **Timed Response (MTL)： "`request`が発生した場合、`response`は特定の時間間隔(例： 5秒)以内に発生しなければならない。」
   - **意味： 基本のレスポンスパターンにリアルタイム制約を追加します。
-- **式： `tlCore.always(request.implies(response.eventuallyTimed(TimeInterval(Duration.zero， Duration(seconds： 5)))))`
+- **式： `always(request.implies(response.eventuallyTimed(TimeInterval(Duration.zero， Duration(seconds： 5)))))`
 - **MTL： `G(request -> F[0s， 5s] response)`
   - **使用例： パフォーマンス要件のテスト、タイムアウト、指定された期間内に完了するアニメーション、ユーザーフィードバックの即時表示。
 
 - **フラッカーなし / フェーズ中の安定性： 「特定のフェーズ条件(`loading`)が真である間、望ましくない一時的な条件(`error`)は決して真になってはならない。」
 - **意味： 特定の操作中の安定性を保証します。`error`条件は、`loading`条件が真である限り禁止されます。
-  - **式1 (厳格)：** `tlCore.always(loading.implies(error.not()))`
+  - **式1 (厳格)：** `always(loading.implies(error.not()))`
 - **LTL： `G(loading -> ！error)` (エラーは*決して* trueになってはならない)
-- **式2 (Untilを使用)： `tlCore.always(loading.implies(error.not().until(loading.not())))`
+- **式2 (Untilを使用)： `always(loading.implies(error.not().until(loading.not())))`
   - **LTL：** `G(loading -> (！error U ！loading))` (loading が開始されると、error は loading が false になるまで少なくとも false のまま維持されなければならない)
 - **使用例：** ロード中の一時的なエラーメッセージの防止、トランジション中の UI 一貫性の確保、プロセス中に特定のアクションが無効化されていることを検証する。
 
 - **状態順序：** "状態 `phaseA` は、`phaseC` が発生する前に必ず`phaseB` に続いていなければならない。」
 - **意味：** 主要な状態の特定のシーケンスを強制する。
-- **式 (概念的 - 厳格さに応じて精緻化が必要)：** `tlCore.always(phaseA.implies(phaseC.not().until(phaseB)))`
+- **式 (概念的 - 厳格さに応じて精緻化が必要)：** `always(phaseA.implies(phaseC.not().until(phaseB)))`
   - **LTL：** `G(phaseA -> (！phaseC U phaseB))`
 - **使用例： ウィザード、マルチステッププロセス、セットアップフェーズが完了する前にオペレーションフェーズが開始されないことを確認する。
 
@@ -835,7 +833,7 @@ final formula = tlCore.always(loginClicked.implies(tlCore.next(isLoading)));
 - **式が期待通りに評価されない(テストが論理的に失敗する)：**
 - **症状： `expect(trace， satisfiesLtl(formula))` が失敗するが、アプリケーション論理は正しいと信じている。
   - **命題定義の確認：**
-    - **`state` vs `event`： 一時的にのみ成立する条件に `tlCore.state` を使用しましたか、または持続する条件に `tlCore.event` を使用しましたか？セクション 3 - 命題： `state` vs `event` およびセクション 4 - API リファレンスを確認してください。
+    - **`state` vs `event`： 一時的にのみ成立する条件に `state` を使用しましたか、または持続する条件に `event` を使用しましたか？セクション 3 - 命題： `state` vs `event` およびセクション 4 - API リファレンスを確認してください。
     - **述語論理：** `state`/`event` 内の述語関数 `(s) => ...` が、`AppSnap` フィールドに基づいて条件を正しく反映していますか？述語内にプリント文を追加するか、別でテストしてください。
 - **`AppSnap` マッピング：** `AppSnap.fromAppState` ファクトリが、実際のアプリケーション状態を命題で使用される`AppSnap` フィールドに正しくマッピングしていますか？このマッピング論理を確認してください。
   - **式論理の確認：**

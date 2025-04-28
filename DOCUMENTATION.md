@@ -77,8 +77,8 @@ The `examples/login_flow_ltl` provides a practical starting point. Here's the es
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:login_flow_ltl_example/main.dart'; // Your app
-import 'package:temporal_logic_core/temporal_logic_core.dart' as tlCore;
-import 'package:temporal_logic_flutter/temporal_logic_flutter.dart' as tlFlutter;
+import 'package:temporal_logic_core/temporal_logic_core.dart';
+import 'package:temporal_logic_flutter/temporal_logic_flutter.dart';
 
 // Represents a snapshot of the relevant application state for verification.
 // Needs to be immutable and implement ==/hashCode.
@@ -110,7 +110,7 @@ class AppSnap {
 void main() {
   testWidgets('Successful login flow satisfies LTL formula', (tester) async {
     // 1. Setup: Create a recorder to capture state snapshots over time.
-    final recorder = tlFlutter.TraceRecorder<AppSnap>();
+    final recorder = TraceRecorder<AppSnap>();
     final container = ProviderContainer(); // Assuming Riverpod for state management
     addTearDown(container.dispose);
     recorder.initialize(); // Start time tracking
@@ -139,11 +139,11 @@ void main() {
 
     // 5. Define Propositions: Basic true/false statements about an AppSnap.
     // Use `state` for conditions that hold over a duration.
-    final loading = tlCore.state<AppSnap>((s) => s.isLoading, name: 'loading');
-    final home = tlCore.state<AppSnap>((s) => s.isOnHomeScreen, name: 'home');
-    final error = tlCore.state<AppSnap>((s) => s.hasError, name: 'error');
+    final loading = state<AppSnap>((s) => s.isLoading, name: 'loading');
+    final home = state<AppSnap>((s) => s.isOnHomeScreen, name: 'home');
+    final error = state<AppSnap>((s) => s.hasError, name: 'error');
     // Use `event` for conditions marking a specific point in time (often a transition trigger).
-    final loginClicked = tlCore.event<AppSnap>((s) => s.loginClicked, name: 'loginClicked');
+    final loginClicked = event<AppSnap>((s) => s.loginClicked, name: 'loginClicked');
 
     // 6. Define LTL Formula: Specify the expected temporal behavior.
     // "Globally (G), if loginClicked happens, then necessarily (->)
@@ -151,18 +151,18 @@ void main() {
     //  eventually (F) we reach the home screen, AND
     //  globally (G) we never encounter an error."
     // G(loginClicked -> (X loading && F home && G !error))
-    final formula = tlCore.always(
+    final formula = always(
       loginClicked.implies(
-        tlCore.next(loading)
-        .and(tlCore.eventually(home))
-        .and(tlCore.always(error.not()))
+        next(loading)
+        .and(eventually(home))
+        .and(always(error.not()))
       )
     );
 
     // 7. Verify: Check if the recorded sequence of AppSnaps (the trace) satisfies the formula.
     final trace = recorder.trace;
     // Use the custom matcher from temporal_logic_flutter
-    expect(trace, tlFlutter.satisfiesLtl(formula));
+    expect(trace, satisfiesLtl(formula));
   });
 }
 ```
@@ -194,18 +194,18 @@ void main() {
 
 Temporal logic formulas are built upon **Atomic Propositions**: fundamental true/false statements about a single state snapshot (`AppSnap`). The key is choosing whether a condition represents an ongoing *state* or a momentary *event*.
 
-- **`tlCore.state<T>(Predicate<T> predicate, {String? name})`**:
+- **`state<T>(Predicate<T> predicate, {String? name})`**:
   - **Purpose:** Creates an `AtomicProposition` intended to represent a condition that holds *while* the application is in a certain configuration or phase (a duration).
   - **`predicate`:** A function `(T state) => bool` that returns `true` if the state snapshot `state` satisfies the condition.
   - **`name`:** An optional descriptive name for debugging.
-  - **Example:** `final isLoading = tlCore.state<AppSnap>((s) => s.isLoading, name: 'Is Loading');`
+  - **Example:** `final isLoading = state<AppSnap>((s) => s.isLoading, name: 'Is Loading');`
   - **See Also:** Section 3 - Propositions: `state` vs `event` for conceptual details.
 
-- **`tlCore.event<T>(Predicate<T> predicate, {String? name})`**:
+- **`event<T>(Predicate<T> predicate, {String? name})`**:
   - **Purpose:** Creates an `AtomicProposition` intended to represent something happening at a specific point in time (an occurrence or trigger).
   - **`predicate`:** A function `(T state) => bool` that returns `true` if the state snapshot `state` represents the occurrence of the event. Often, this predicate checks a transient flag set specifically for one snapshot.
   - **`name`:** An optional descriptive name for debugging.
-  - **Example:** `final loginClicked = tlCore.event<AppSnap>((s) => s.loginClicked, name: 'Login Clicked Event');`
+  - **Example:** `final loginClicked = event<AppSnap>((s) => s.loginClicked, name: 'Login Clicked Event');`
   - **See Also:** Section 3 - Propositions: `state` vs `event` and Section 5 - Handling Transient Events for conceptual and practical details.
 
 **Choosing Between `state` and `event`:**
@@ -223,29 +223,29 @@ The choice significantly affects how temporal operators like `next` (X), `always
 
 LTL reasons about properties along the linear sequence of states in the trace. It allows you to express relationships between states over time. Key operators provided by `temporal_logic_core` (available as extension methods on `Formula`):
 
-- **`tlCore.next(formula)`**:
+- **`next(formula)`**:
   - **Symbol:** X `formula`
   - **Semantics:** The `formula` must hold true in the *immediately following* state in the trace. If the current state is the last state in the trace, `next` is typically considered false (as there is no next state).
-  - **Example:** `requestSent.implies(tlCore.next(responsePending))` (If a request was just sent, the next state must show the response as pending).
+  - **Example:** `requestSent.implies(next(responsePending))` (If a request was just sent, the next state must show the response as pending).
 
-- **`tlCore.always(formula)`**:
+- **`always(formula)`**:
   - **Symbol:** G `formula`
   - **Semantics:** The `formula` must hold true in the *current* state and *all subsequent* states in the trace until the end.
-  - **Example:** `loggedIn.implies(tlCore.always(sessionValid))` (Once logged in, the session must remain valid for the entire remaining trace).
+  - **Example:** `loggedIn.implies(always(sessionValid))` (Once logged in, the session must remain valid for the entire remaining trace).
   - **Common Use:** Expressing safety properties or invariants (something bad should never happen).
 
-- **`tlCore.eventually(formula)`**:
+- **`eventually(formula)`**:
   - **Symbol:** F `formula`
   - **Semantics:** The `formula` must hold true *at some point* in the trace, either in the current state or in some future state.
-  - **Example:** `buttonPressed.implies(tlCore.eventually(operationComplete))` (If the button is pressed, the operation must complete at some point later).
+  - **Example:** `buttonPressed.implies(eventually(operationComplete))` (If the button is pressed, the operation must complete at some point later).
   - **Common Use:** Expressing liveness properties (something good should eventually happen).
 
-- **`tlCore.until(formula1, formula2)`**:
+- **`until(formula1, formula2)`**:
   - **Symbol:** `formula1` U `formula2`
   - **Semantics:** `formula1` must hold true continuously from the current state *at least until* the state where `formula2` becomes true. Crucially, `formula2` *must* eventually become true at or after the current state.
   - **Example:** `waitingForInput.until(inputReceived)` (We must be in the 'waiting' state continuously until 'inputReceived' becomes true, and 'inputReceived' must eventually happen).
 
-- **`tlCore.release(formula1, formula2)`**:
+- **`release(formula1, formula2)`**:
   - **Symbol:** `formula1` R `formula2`
   - **Semantics:** `formula2` must hold true continuously from the current state up to *and including* the point where `formula1` first becomes true. If `formula1` never becomes true in the remainder of the trace, `formula2` must hold true forever." (Dual of Until; often used for ensuring a condition holds unless released by another).
   - **Example:** `errorOccurred.release(operationInProgress)` (The operation must remain 'in progress' at least until an error occurs. If no error occurs, it must stay 'in progress'.) Often used to state that a condition (`formula2`) must hold unless some releasing condition (`formula1`) happens.
@@ -300,29 +300,29 @@ These operators combine existing formulas to create more complex logical stateme
 
 These are the core temporal operators that reason about sequences of states over time.
 
-- **`formula.next()`** or `tlCore.next(formula)`:
+- **`formula.next()`** or `next(formula)`:
   - **Symbol:** X `formula`
   - **Semantics:** The `formula` must hold true in the *immediately following* state in the trace. If the current state is the last state in the trace, `next` is typically considered false (as there is no next state).
-  - **Example:** `requestSent.implies(tlCore.next(responsePending))` (If a request was just sent, the next state must show the response as pending).
+  - **Example:** `requestSent.implies(next(responsePending))` (If a request was just sent, the next state must show the response as pending).
 
-- **`formula.always()`** or `tlCore.always(formula)`:
+- **`formula.always()`** or `always(formula)`:
   - **Symbol:** G `formula`
   - **Semantics:** The `formula` must hold true in the *current* state and *all subsequent* states in the trace until the end.
-  - **Example:** `loggedIn.implies(tlCore.always(sessionValid))` (Once logged in, the session must remain valid for the entire remaining trace).
+  - **Example:** `loggedIn.implies(always(sessionValid))` (Once logged in, the session must remain valid for the entire remaining trace).
   - **Common Use:** Expressing safety properties or invariants (something bad should never happen).
 
-- **`formula.eventually()`** or `tlCore.eventually(formula)`:
+- **`formula.eventually()`** or `eventually(formula)`:
   - **Symbol:** F `formula`
   - **Semantics:** The `formula` must hold true *at some point* in the trace, either in the current state or in some future state.
-  - **Example:** `buttonPressed.implies(tlCore.eventually(operationComplete))` (If the button is pressed, the operation must complete at some point later).
+  - **Example:** `buttonPressed.implies(eventually(operationComplete))` (If the button is pressed, the operation must complete at some point later).
   - **Common Use:** Expressing liveness properties (something good should eventually happen).
 
-- **`formula1.until(formula2)`** or `tlCore.until(formula1, formula2)`:
+- **`formula1.until(formula2)`** or `until(formula1, formula2)`:
   - **Symbol:** `formula1` U `formula2`
   - **Semantics:** `formula1` must hold true continuously from the current state *at least until* the state where `formula2` becomes true. Crucially, `formula2` *must* eventually become true at or after the current state.
   - **Example:** `waitingForInput.until(inputReceived)` (We must be in the 'waiting' state continuously until 'inputReceived' becomes true, and 'inputReceived' must eventually happen).
 
-- **`formula1.release(formula2)`** or `tlCore.release(formula1, formula2)`:
+- **`formula1.release(formula2)`** or `release(formula1, formula2)`:
   - **Symbol:** `formula1` R `formula2`
   - **Semantics:** `formula2` must hold true continuously from the current state up to *and including* the point where `formula1` first becomes true. If `formula1` never becomes true in the remainder of the trace, `formula2` must hold true for the entire remainder. `formula2` must be true *at least* until `formula1` is true (if `formula1` ever becomes true). This is the logical dual of `until`.
   - **Example:** `errorOccurred.release(operationInProgress)` (The operation must remain 'in progress' at least until an error occurs. If no error occurs, it must stay 'in progress'.) Often used to state that a condition (`formula2`) must hold unless some releasing condition (`formula1`) happens.
@@ -331,18 +331,18 @@ These are the core temporal operators that reason about sequences of states over
 
 These factory functions are the primary way to create `AtomicProposition` instances, forming the building blocks of your formulas.
 
-- **`tlCore.state<T>(Predicate<T> predicate, {String? name})`**:
+- **`state<T>(Predicate<T> predicate, {String? name})`**:
   - **Purpose:** Creates an `AtomicProposition` intended to represent a condition that holds *while* the application is in a certain configuration or phase (a duration).
   - **`predicate`:** A function `(T state) => bool` that returns `true` if the state snapshot `state` satisfies the condition.
   - **`name`:** An optional descriptive name for debugging.
-  - **Example:** `final isLoading = tlCore.state<AppSnap>((s) => s.isLoading, name: 'Is Loading');`
+  - **Example:** `final isLoading = state<AppSnap>((s) => s.isLoading, name: 'Is Loading');`
   - **See Also:** Section 3 - Propositions: `state` vs `event` for conceptual details.
 
-- **`tlCore.event<T>(Predicate<T> predicate, {String? name})`**:
+- **`event<T>(Predicate<T> predicate, {String? name})`**:
   - **Purpose:** Creates an `AtomicProposition` intended to represent something happening at a specific point in time (an occurrence or trigger).
   - **`predicate`:** A function `(T state) => bool` that returns `true` if the state snapshot `state` represents the occurrence of the event. Often, this predicate checks a transient flag set specifically for one snapshot.
   - **`name`:** An optional descriptive name for debugging.
-  - **Example:** `final loginClicked = tlCore.event<AppSnap>((s) => s.loginClicked, name: 'Login Clicked Event');`
+  - **Example:** `final loginClicked = event<AppSnap>((s) => s.loginClicked, name: 'Login Clicked Event');`
   - **See Also:** Section 3 - Propositions: `state` vs `event` and Section 5 - Handling Transient Events for conceptual and practical details.
 
 ### `temporal_logic_mtl` API
@@ -368,12 +368,12 @@ A class defining a time window used by timed MTL operators (like `alwaysTimed` a
 
 These operators extend their LTL counterparts (`always`, `eventually`) by adding a `TimeInterval` constraint.
 
-- **`formula.alwaysTimed(interval)`** or `tlMtl.alwaysTimed(formula, interval)`:
+- **`formula.alwaysTimed(interval)`** or `alwaysTimed(formula, interval)`:
   - **Symbol:** G[`interval`] `formula` (e.g., G[0, 5s] `formula`)
   - **Semantics:** The `formula` must hold true at *all* future states in the trace whose timestamp `t_future` satisfies `t_current + interval.start <= t_future < t_current + interval.end` (adjusting for inclusiveness based on `interval` flags). If no states fall within the interval, the operator is vacuously true.
   - **Example:** `dataFetched.implies(loadingIndicatorVisible.not().alwaysTimed(TimeInterval(Duration.zero, Duration(seconds: 1))))` (If data was fetched, then the loading indicator must *not* be visible for the entire interval from 0s to 1s after the fetch).
 
-- **`formula.eventuallyTimed(interval)`** or `tlMtl.eventuallyTimed(formula, interval)`:
+- **`formula.eventuallyTimed(interval)`** or `eventuallyTimed(formula, interval)`:
   - **Symbol:** F[`interval`] `formula` (e.g., F[2s, 5s] `formula`)
   - **Semantics:** The `formula` must hold true at *at least one* future state in the trace whose timestamp `t_future` satisfies `t_current + interval.start <= t_future < t_current + interval.end` (adjusting for inclusiveness). If no state within the interval satisfies the formula, or if no states fall within the interval, the operator is false.
   - **Example:** `requestSent.implies(responseReceived.eventuallyTimed(TimeInterval(Duration.zero, Duration(seconds: 3))))` (If a request was sent, a response must be received sometime within the next 3 seconds).
@@ -425,11 +425,11 @@ Custom `flutter_test` matchers that integrate temporal logic evaluation directly
 
       ```dart
       final trace = recorder.trace;
-      final ltlFormula = tlCore.always(isSuccess.implies(isError.not()));
-      expect(trace, tlFlutter.satisfiesLtl(ltlFormula));
+      final ltlFormula = always(isSuccess.implies(isError.not()));
+      expect(trace, satisfiesLtl(ltlFormula));
 
       // Can also be negated:
-      expect(failedTrace, isNot(tlFlutter.satisfiesLtl(ltlFormula)));
+      expect(failedTrace, isNot(satisfiesLtl(ltlFormula)));
       ```
 
   - **Output on Failure:** When the match fails, it typically provides a descriptive error message, often including the reason from the underlying `EvaluationResult`, indicating where and why the formula was violated in the trace.
@@ -452,15 +452,15 @@ The most common way to capture a trace in Flutter tests is to listen to changes 
 ```dart
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:temporal_logic_flutter/temporal_logic_flutter.dart' as tlFlutter;
-import 'package:temporal_logic_core/temporal_logic_core.dart' as tlCore;
+import 'package:temporal_logic_flutter/temporal_logic_flutter.dart';
+import 'package:temporal_logic_core/temporal_logic_core.dart';
 // Import your AppState, AppSnap, providers, and main app widget
 // ...
 
 void main() {
   testWidgets('Example Riverpod Integration Test', (tester) async {
     // 1. Create Recorder and ProviderContainer
-    final recorder = tlFlutter.TraceRecorder<AppSnap>();
+    final recorder = TraceRecorder<AppSnap>();
     // Create a fresh container for this test to isolate state
     final container = ProviderContainer();
     // Ensure container is disposed at the end of the test
@@ -514,9 +514,9 @@ void main() {
 
     // --- Verification --- 
     final trace = recorder.trace;
-    final formula = tlCore.always(/* ... your LTL/MTL formula ... */);
+    final formula = always(/* ... your LTL/MTL formula ... */);
 
-    expect(trace, tlFlutter.satisfiesLtl(formula)); // Or satisfiesMtl
+    expect(trace, satisfiesLtl(formula)); // Or satisfiesMtl
 
     // Recorder is disposed automatically via addTearDown if needed,
     // but container disposal is usually the more critical part.
@@ -625,45 +625,45 @@ Temporal logic formulas often follow recurring patterns that express fundamental
 
 - **Response (Eventually):** "A certain condition (`request`) must eventually be followed by another condition (`response`)."
   - **Meaning:** If the `request` happens, the system guarantees that, at some point later, the `response` will happen. It doesn't say *when*, only that it *will* happen.
-  - **Formula:** `tlCore.always(request.implies(tlCore.eventually(response)))`
+  - **Formula:** `always(request.implies(eventually(response)))`
   - **LTL:** `G(request -> F response)`
   - **Use Case:** Verifying that actions lead to expected outcomes (e.g., submitting data eventually leads to a success confirmation), acknowledgments are received, etc.
 
 - **Response (Next):** "If `request` happens, then `response` must happen in the very next state."
   - **Meaning:** The effect (`response`) must be immediate in terms of state transitions following the cause (`request`).
-  - **Formula:** `tlCore.always(request.implies(tlCore.next(response)))`
+  - **Formula:** `always(request.implies(next(response)))`
   - **LTL:** `G(request -> X response)`
   - **Use Case:** Testing immediate state updates after synchronous actions (e.g., clicking a button immediately enables another).
 
 - **Safety (Never / Invariant):** "A certain undesirable condition (`errorState`) must never occur."
   - **Meaning:** Throughout the entire execution trace (from the point the formula is checked), the `errorState` condition must always be false.
-  - **Formula:** `tlCore.always(errorState.not())`
+  - **Formula:** `always(errorState.not())`
   - **LTL:** `G(!errorState)`
   - **Use Case:** Enforcing critical safety constraints, ensuring forbidden states are unreachable (e.g., a user should never see admin controls, a system should never enter a deadlock state).
 
 - **Liveness (Eventually):** "If an `action` is triggered, its `completion` must eventually occur."
   - **Meaning:** The system must eventually make progress and reach the `completion` state after the `action` has occurred. It guarantees termination or eventual success.
-  - **Formula:** `tlCore.always(action.implies(tlCore.eventually(completion)))`
+  - **Formula:** `always(action.implies(eventually(completion)))`
   - **LTL:** `G(action -> F completion)`
   - **Use Case:** Ensuring processes don't get stuck, requests are eventually processed, progress indicators eventually disappear.
 
 - **Timed Response (MTL):** "If `request` happens, then `response` must occur within a specific time interval (e.g., 5 seconds)."
   - **Meaning:** Extends the basic Response pattern with a real-time constraint.
-  - **Formula:** `tlCore.always(request.implies(response.eventuallyTimed(TimeInterval(Duration.zero, Duration(seconds: 5)))))`
+  - **Formula:** `always(request.implies(response.eventuallyTimed(TimeInterval(Duration.zero, Duration(seconds: 5)))))`
   - **MTL:** `G(request -> F[0s, 5s] response)`
   - **Use Case:** Testing performance requirements, timeouts, animations completing within a duration, user feedback appearing promptly.
 
 - **No Flicker / Stability During Phase:** "While a certain phase condition (`loading`) is true, an undesirable transient condition (`error`) must never become true."
   - **Meaning:** Guarantees stability during a specific operation. The `error` condition is forbidden as long as the `loading` condition holds.
-  - **Formula 1 (Strict):** `tlCore.always(loading.implies(error.not()))`
+  - **Formula 1 (Strict):** `always(loading.implies(error.not()))`
     - **LTL:** `G(loading -> !error)` (Error must *never* be true when loading is true)
-  - **Formula 2 (Using Until):** `tlCore.always(loading.implies(error.not().until(loading.not())))`
+  - **Formula 2 (Using Until):** `always(loading.implies(error.not().until(loading.not())))`
     - **LTL:** `G(loading -> (!error U !loading))` (If loading starts, error must remain false at least until loading becomes false)
   - **Use Case:** Preventing temporary error messages during loading, ensuring UI consistency during transitions, verifying that certain actions are disabled during a process.
 
 - **State Ordering:** "State `phaseA` must always be followed eventually by `phaseB` before `phaseC` can occur."
   - **Meaning:** Enforces a specific sequence of major states.
-  - **Formula (Conceptual - may need refinement based on strictness):** `tlCore.always(phaseA.implies(phaseC.not().until(phaseB)))`
+  - **Formula (Conceptual - may need refinement based on strictness):** `always(phaseA.implies(phaseC.not().until(phaseB)))`
   - **LTL:** `G(phaseA -> (!phaseC U phaseB))`
   - **Use Case:** Testing wizards, multi-step processes, ensuring setup phases complete before operational phases begin.
 
@@ -766,16 +766,16 @@ The solution is to manually record a special `AppSnap` in your test code precise
 
 4. **Implicit Reset:** The *next* time `recorder.record()` is called (likely by your state listener reacting to the consequence of the tap, or another manual record), the `AppSnap.fromAppState` factory will be called *without* explicitly setting `loginClicked: true`, so the flag will naturally revert to its default `false` value in the subsequent snapshot(s).
 
-5. **Use `event<T>` Proposition:** Define your temporal logic proposition using `tlCore.event<T>` that checks this specific transient flag.
+5. **Use `event<T>` Proposition:** Define your temporal logic proposition using `event<T>` that checks this specific transient flag.
 
     ```dart
-    final loginClicked = tlCore.event<AppSnap>(
+    final loginClicked = event<AppSnap>(
       (s) => s.transientLoginClick, 
       name: 'loginClickedEvent'
     );
     
     // Now you can use it in formulas like:
-    final formula = tlCore.always(loginClicked.implies(tlCore.next(isLoading)));
+    final formula = always(loginClicked.implies(next(isLoading)));
     ```
 
 **Why this works:** This technique inserts a unique marker into the trace precisely at the point the event is logically considered to have happened within the test flow. It allows temporal operators like `X` (Next) and timed operators F[0, ...] (Eventually within 0 seconds...) to accurately reason about the state immediately following the event trigger.
@@ -850,9 +850,9 @@ This section outlines potential application scenarios where temporal logic testi
 Here are common issues encountered when writing and running temporal logic tests, along with debugging strategies:
 
 - **Formula Doesn't Evaluate as Expected (Test Fails Logically):**
-  - **Symptom:** `expect(trace, satisfiesLtl/Mtl(formula))` fails, but you believe the application logic is correct.
+  - **Symptom:** `expect(trace, satisfiesLtl(formula))` fails, but you believe the application logic is correct.
   - **Check Proposition Definitions:**
-    - **`state` vs `event`:** Did you use `tlCore.state` for a condition that only holds momentarily, or `tlCore.event` for a condition that persists? Review Section 3 - Propositions: `state` vs `event` and Section 4 - API Reference.
+    - **`state` vs `event`:** Did you use `state` for a condition that only holds momentarily, or `event` for a condition that persists? Review Section 3 - Propositions: `state` vs `event` and Section 4 - API Reference.
     - **Predicate Logic:** Is the predicate function `(s) => ...` inside `state`/`event` correctly reflecting the condition based on the `AppSnap` fields? Add print statements inside the predicate or test it separately.
     - **`AppSnap` Mapping:** Is the `AppSnap.fromAppState` factory correctly mapping the real application state to the `AppSnap` fields used by the propositions? Verify this mapping logic.
   - **Verify Formula Logic:**
