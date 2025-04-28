@@ -280,32 +280,32 @@ MTL は LTL に明示的な時間制約を時制演算子に追加し、物事�
 
 これらは、時間経過に伴う状態のシーケンスについて推論する基本的な時制演算子です。
 
-- **`formula.next()`** または `tlCore.next(formula)`：
-- **シンボル： X `formula`
-  - **意味： `formula` は、トレース内の*直後の*状態において真でなければならない。現在の状態がトレースの最終状態の場合、`next` は通常偽とみなされる(次の状態が存在しないため)。
-- **例： `requestSent.implies(tlCore.next(responsePending))` (リクエストが送信された場合、次の状態ではレスポンスが待機中である必要がある)。
+- **`formula.next()`** または `tlCore.next(formula)`:
+  - **シンボル:** X `formula`
+  - **意味:** `formula` は、トレース内の*直後の*状態において真でなければならない。現在の状態がトレースの最終状態の場合、`next` は通常偽とみなされる(次の状態が存在しないため)。
+  - **例:** `requestSent.implies(tlCore.next(responsePending))` (リクエストが送信された場合、次の状態ではレスポンスが待機中である必要がある)。
 
-- **`formula.always()`** または `tlCore.always(formula)`：
-- **シンボル： G `formula`
-- **意味論： `formula` は、トレース内の *現在の* 状態および *以降のすべての* 状態において、トレースの終了まで真でなければならない。
-  - **例： `loggedIn.implies(tlCore.always(sessionValid))` (ログイン後、セッションはトレースの残りの期間中有効でなければならない)。
-- **一般的な用途： 安全性を表現するプロパティや不変条件(悪いことが決して起こらないことを保証する)。
+- **`formula.always()`** または `tlCore.always(formula)`:
+  - **シンボル:** G `formula`
+  - **意味論:** `formula` は、トレース内の *現在の* 状態および *以降のすべての* 状態において、トレースの終了まで真でなければならない。
+  - **例:** `loggedIn.implies(tlCore.always(sessionValid))` (ログイン後、セッションはトレースの残りの期間中有効でなければならない)。
+  - **一般的な用途:** 安全性を表現するプロパティや不変条件(悪いことが決して起こらないことを保証する)。
 
-- **`formula.eventually()`** または `tlCore.eventually(formula)`：
-- **シンボル： F `formula`
-  - **意味： `formula` は、トレース内のいずれかの時点(現在の状態または将来の状態)で真でなければならない。
-- **例： `buttonPressed.implies(tlCore.eventually(operationComplete))` (ボタンが押された場合、操作は後で完了しなければならない)。
-- **一般的な用途： 生存性プロパティの表現(良いことが最終的に起こるべきである)。
+- **`formula.eventually()`** または `tlCore.eventually(formula)`:
+  - **シンボル:** F `formula`
+  - **意味:** `formula` は、トレース内のいずれかの時点(現在の状態または将来の状態)で真でなければならない。
+  - **例:** `buttonPressed.implies(tlCore.eventually(operationComplete))` (ボタンが押された場合、操作は後で完了しなければならない)。
+  - **一般的な用途:** 生存性プロパティの表現(良いことが最終的に起こるべきである)。
 
-- **`formula1.until(formula2)`** または `tlCore.until(formula1， formula2)`：
-- **シンボル： `formula1` U `formula2`
-  - **意味： `formula1` は、現在の状態から *少なくとも `formula2` が真になる状態まで継続的に真でなければならない。重要な点は、`formula2` は*必ず 現在の状態以降に真になる必要がある。
-  - **例：** `waitingForInput.until(inputReceived)` (『waiting』状態が『inputReceived』が真になるまで継続的に維持され、かつ『inputReceived』は最終的に発生しなければならない)。
+- **`formula1.until(formula2)`** または `tlCore.until(formula1, formula2)`:
+  - **シンボル:** `formula1` U `formula2`
+  - **意味:** `formula1` は、現在の状態から *少なくとも* `formula2` が真になる状態まで継続的に真でなければならない。重要な点は、`formula2` は*必ず* 現在の状態以降に真になる必要がある。
+  - **例:** `waitingForInput.until(inputReceived)` ('waiting'状態が'inputReceived'が真になるまで継続的に維持され、かつ'inputReceived'は最終的に発生しなければならない)。
 
-- **`formula1.release(formula2)`** または `tlCore.release(formula1， formula2)`：
-  - **シンボル：** `formula1` R `formula2`
-- **意味： `formula2` は、現在の状態から *および含む* `formula1` が初めて真になる時点まで、継続的に真でなければならない。`formula1` がトレースの残りの部分で真にならない場合、`formula2` はトレースの残りの全期間にわたって真でなければならない。`formula2` は、`formula1` が真になるまで(`formula1` が真になる場合)*少なくとも 真でなければなりません。これは `until` の論理的双対です。
-- **例：** `errorOccurred.release(operationInProgress)` (操作はエラーが発生するまで少なくとも 'in progress' の状態を維持する必要があります。エラーが発生しない場合、操作は 'in progress' の状態を維持し続けます。) 通常、条件(`formula2`)が、ある解放条件(`formula1`)が発生するまで成立しなければならないことを表すために使用されます。
+- **`formula1.release(formula2)`** または `tlCore.release(formula1, formula2)`:
+  - **シンボル:** `formula1` R `formula2`
+  - **意味:** `formula2` は、現在の状態から *および含む* `formula1` が初めて真になる時点まで、継続的に真でなければならない。`formula1` がトレースの残りの部分で真にならない場合、`formula2` はトレースの残りの全期間にわたって真でなければならない。`formula2` は、`formula1` が真になるまで(`formula1` が真になる場合)*少なくとも* 真でなければなりません。これは `until` の論理的双対です。
+  - **例:** `errorOccurred.release(operationInProgress)` (操作はエラーが発生するまで少なくとも 'in progress' の状態を維持する必要があります。エラーが発生しない場合、操作は 'in progress' の状態を維持し続けます。) 通常、条件(`formula2`)が、ある解放条件(`formula1`)が発生するまで成立しなければならないことを表すために使用されます。
 
 #### ヘルパー関数(`state`， `event`)
 
@@ -350,7 +350,7 @@ MTL は LTL に明示的な時間制約を時制演算子に追加し、物事�
 
 - **`formula.alwaysTimed(interval)`** または `tlMtl.alwaysTimed(formula， interval)`：
 - **シンボル：** G[`interval`] `formula`(例： G[0， 5s] `formula`)
-  - **意味論： `formula` は、トレース内のタイムスタンプ `t_future` が `t_current + interval.start <= t_future < t_current + interval.end` を満たすすべての未来の状態において真でなければなりません(`interval` のフラグに基づいて包含性を調整します)。インターバル内に状態が存在しない場合、オペレーターは空虚に真です。
+  - **意味論： `formula` は、トレース内のタイムスタンプ `t_future` が `t_current + interval.start <= t_future < t_current + interval.end` を満たすすべての将来の状態において真でなければなりません(`interval` のフラグに基づいて包含性を調整します)。インターバル内に状態が存在しない場合、オペレーターは空虚に真です。
   - **例：** `dataFetched.implies(loadingIndicatorVisible.not().alwaysTimed(TimeInterval(Duration.zero， Duration(seconds： 1))))` (データが取得された場合、取得後 0 秒から 1 秒までのインターバル全体において、ローディングインジケーターは *表示されてはならない*)。
 
 - **`formula.eventuallyTimed(interval)`** または `tlMtl.eventuallyTimed(formula， interval)`：
@@ -417,7 +417,7 @@ expect(failedTrace, isNot(tlFlutter.satisfiesLtl(ltlFormula)));
 
 - **失敗時の出力：** マッチが失敗した場合、通常は説明的なエラーメッセージが提供され、多くの場合、基盤となる `EvaluationResult` から理由を含み、トレース内で式が違反した場所と理由を示します。
 
-## 5. クックブック & ベストプラクティス
+## 5. クックブック \& ベストプラクティス
 
 このセクションでは、プロジェクトで時制論理パッケージを効果的に使用する実践的なアドバイス、パターン、コードスニペットを提供します。
 

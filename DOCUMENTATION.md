@@ -223,12 +223,34 @@ The choice significantly affects how temporal operators like `next` (X), `always
 
 LTL reasons about properties along the linear sequence of states in the trace. It allows you to express relationships between states over time. Key operators provided by `temporal_logic_core` (available as extension methods on `Formula`):
 
-- **`next(formula)` (X)**: "In the immediately following state, `formula` must be true." (Looks one step ahead).
-- **`always(formula)` (G)**: "From this point forward (including the current state), `formula` must always be true." (Invariant property).
-- **`eventually(formula)` (F)**: "At some point from now on (including the current state), `formula` must become true." (Liveness property, something good eventually happens).
-- **`until(formula1, formula2)` (U)**: "`formula1` must remain true continuously *at least until* the point where `formula2` becomes true. Furthermore, `formula2` *must* eventually become true."
-- **`release(formula1, formula2)` (R)**: "`formula2` must remain true up to and including the point where `formula1` first becomes true. If `formula1` never becomes true, `formula2` must remain true forever." (Dual of Until; often used for ensuring a condition holds unless released by another).
-- Standard logical operators (`and`, `or`, `not`, `implies`) combine these temporal operators and propositions.
+- **`tlCore.next(formula)`**:
+  - **Symbol:** X `formula`
+  - **Semantics:** The `formula` must hold true in the *immediately following* state in the trace. If the current state is the last state in the trace, `next` is typically considered false (as there is no next state).
+  - **Example:** `requestSent.implies(tlCore.next(responsePending))` (If a request was just sent, the next state must show the response as pending).
+
+- **`tlCore.always(formula)`**:
+  - **Symbol:** G `formula`
+  - **Semantics:** The `formula` must hold true in the *current* state and *all subsequent* states in the trace until the end.
+  - **Example:** `loggedIn.implies(tlCore.always(sessionValid))` (Once logged in, the session must remain valid for the entire remaining trace).
+  - **Common Use:** Expressing safety properties or invariants (something bad should never happen).
+
+- **`tlCore.eventually(formula)`**:
+  - **Symbol:** F `formula`
+  - **Semantics:** The `formula` must hold true *at some point* in the trace, either in the current state or in some future state.
+  - **Example:** `buttonPressed.implies(tlCore.eventually(operationComplete))` (If the button is pressed, the operation must complete at some point later).
+  - **Common Use:** Expressing liveness properties (something good should eventually happen).
+
+- **`tlCore.until(formula1, formula2)`**:
+  - **Symbol:** `formula1` U `formula2`
+  - **Semantics:** `formula1` must hold true continuously from the current state *at least until* the state where `formula2` becomes true. Crucially, `formula2` *must* eventually become true at or after the current state.
+  - **Example:** `waitingForInput.until(inputReceived)` (We must be in the 'waiting' state continuously until 'inputReceived' becomes true, and 'inputReceived' must eventually happen).
+
+- **`tlCore.release(formula1, formula2)`**:
+  - **Symbol:** `formula1` R `formula2`
+  - **Semantics:** `formula2` must hold true continuously from the current state up to *and including* the point where `formula1` first becomes true. If `formula1` never becomes true in the remainder of the trace, `formula2` must hold true forever." (Dual of Until; often used for ensuring a condition holds unless released by another).
+  - **Example:** `errorOccurred.release(operationInProgress)` (The operation must remain 'in progress' at least until an error occurs. If no error occurs, it must stay 'in progress'.) Often used to state that a condition (`formula2`) must hold unless some releasing condition (`formula1`) happens.
+
+Standard logical operators (`and`, `or`, `not`, `implies`) combine these temporal operators and propositions.
 
 ### Metric Temporal Logic (MTL) Basics
 
