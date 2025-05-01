@@ -10,3 +10,7 @@
 * Defines `CheckStatus` enum.
 * Includes `Matchers` for defining state properties.
 * Depends on `temporal_logic_core` and `temporal_logic_mtl`.
+
+## 0.1.1
+
+* **CHORE**: Updated dependency constraints to allow `temporal_logic_mtl: ^0.2.0`.

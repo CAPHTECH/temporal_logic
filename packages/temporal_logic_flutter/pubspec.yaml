@@ -1,6 +1,6 @@
 name: temporal_logic_flutter
 description: Flutter integration (TraceRecorder, Matchers) for temporal logic.
-version: 0.1.0
+version: 0.1.1
 homepage: https://github.com/CAPHTECH/temporal_logic/tree/main/packages/temporal_logic_flutter
 repository: https://github.com/CAPHTECH/temporal_logic
 
