@@ -1,6 +1,6 @@
 name: temporal_logic_mtl
 description: Metric Temporal Logic (MTL) extensions for temporal_logic_core.
-version: 0.1.0
+version: 0.2.0
 homepage: https://github.com/CAPHTECH/temporal_logic/tree/main/packages/temporal_logic_mtl
 repository: https://github.com/CAPHTECH/temporal_logic
 

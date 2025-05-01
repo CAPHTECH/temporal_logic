@@ -99,7 +99,7 @@ final class AtomicProposition<T> extends Formula<T> {
   const AtomicProposition(this.predicate, {this.name});
 
   @override
-  String toString() => name ?? predicate.toString();
+  String toString() => name ?? 'Atomic';
 }
 
 /// Represents the logical negation (NOT) of a formula.

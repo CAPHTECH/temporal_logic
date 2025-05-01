@@ -14,7 +14,7 @@ dependencies:
   # Use path dependency to align with examples
   temporal_logic_core: ^0.1.0
   # Use path dependency for mtl as well if needed by this package
-  temporal_logic_mtl: ^0.1.0
+  temporal_logic_mtl: ^0.2.0
   collection: ^1.18.0
   clock: ^1.1.1 # Add clock package
   flutter_test:

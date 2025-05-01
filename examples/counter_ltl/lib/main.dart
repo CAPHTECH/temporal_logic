@@ -3,7 +3,6 @@ import 'dart:async'; // Required for StreamController
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 // Import necessary packages
-import 'package:temporal_logic_core/temporal_logic_core.dart' as tl;
 import 'package:temporal_logic_flutter/temporal_logic_flutter.dart' as tlf;
 
 // --- State Management (Riverpod) ---

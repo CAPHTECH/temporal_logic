@@ -78,6 +78,73 @@ final class UntilTimed<T> extends Formula<T> {
   String toString() => '($left U$interval $right)';
 }
 
+/// Represents the timed release operator `φ R_I ψ` (Release within Interval).
+///
+/// Asserts that the [right] formula `ψ` holds true at all points `k`
+/// within the [interval] `I` relative to the starting point `i`, *unless* the
+/// [left] formula `φ` becomes true at some point `j` within `I`. If `φ`
+/// becomes true at `j`, then `ψ` must hold at all points from `j` up to the
+/// time `t_i + interval.upperBound`.
+///
+/// Another way to think about it: For all points `k` within the interval `I`
+/// relative to `i`, if `ψ` fails at `k`, then `φ` must hold at `k`.
+/// This is equivalent to `¬(¬left U_I ¬right)`.
+///
+/// Example: `error R_[0, 10s] recovery` asserts that `recovery` holds for the
+/// first 10 seconds, or until an `error` occurs (if it occurs within 10s),
+/// after which `recovery` must still hold until the 10s mark.
+final class ReleaseTimed<T> extends Formula<T> {
+  /// The formula `φ` that can "release" the obligation for [right] to hold
+  /// continuously (though [right] must still hold when [left] holds).
+  final Formula<T> left;
+
+  /// The formula `ψ` that must generally hold throughout the interval.
+  final Formula<T> right;
+
+  /// The time interval `I`.
+  final TimeInterval interval;
+
+  /// Creates a timed release formula `φ R_I ψ`.
+  const ReleaseTimed(this.left, this.right, this.interval);
+
+  @override
+  String toString() => '($left R$interval $right)';
+}
+
+/// Represents the timed weak until operator `φ W_I ψ` (Weak Until within Interval).
+///
+/// Asserts that either:
+/// 1. The [left] formula `φ` holds true at all points `k` within the
+///    [interval] `I` relative to the starting point `i` (i.e., `G_I φ` holds).
+/// OR
+/// 2. The timed until condition `φ U_I ψ` holds.
+///
+/// This means `φ` must hold continuously within `I` up until a point `k`
+/// (also within `I`) where `ψ` holds. Unlike `U_I`, if `ψ` never holds within
+/// `I`, the formula can still be true provided `φ` holds throughout `I`.
+///
+/// Equivalent to `(φ U_I ψ) ∨ G_I φ`.
+///
+/// Example: `processing W_[0, 5s] completed` asserts that `processing` holds
+/// until `completed` becomes true within 5 seconds, OR `processing` holds
+/// continuously for the entire 5 seconds.
+final class WeakUntilTimed<T> extends Formula<T> {
+  /// The formula `φ` that must hold until [right] becomes true, or throughout the interval.
+  final Formula<T> left;
+
+  /// The formula `ψ` that eventually becomes true within the interval, or never does.
+  final Formula<T> right;
+
+  /// The time interval `I`.
+  final TimeInterval interval;
+
+  /// Creates a timed weak until formula `φ W_I ψ`.
+  const WeakUntilTimed(this.left, this.right, this.interval);
+
+  @override
+  String toString() => '($left W$interval $right)';
+}
+
 // --- Integrated MTL/LTL Evaluator ---
 
 /// Evaluates a temporal logic [formula] (potentially including both LTL and MTL
@@ -133,6 +200,15 @@ EvaluationResult evaluateMtlTrace<T>(Trace<T> trace, Formula<T> formula, {int st
 EvaluationResult _evaluateRecursive<T>(Trace<T> trace, Formula<T> formula, int index) {
   // Base case: If index is beyond trace length, behavior depends on operator.
   // Handled within each operator case.
+
+  // --- Get current timestamp if needed (avoid repeated lookups) ---
+  Duration? currentIndexTimestamp;
+  if (index < trace.length) {
+    currentIndexTimestamp = trace.events[index].timestamp;
+  } else {
+    // Handle cases where index is at trace.length for operators like Always/Eventually
+    // which might be vacuously true/false on empty suffixes.
+  }
 
   // --- Core LTL Operators (Logic copied from temporal_logic_core.evaluator) ---
   switch (formula) {
@@ -249,7 +325,7 @@ EvaluationResult _evaluateRecursive<T>(Trace<T> trace, Formula<T> formula, int i
       final untilResult = _evaluateRecursive(trace, Until<T>(f.left, f.right), index);
       return untilResult;
 
-    case Release<T> f: // left R right === !(!left U !right)
+    case Release<T> f: // left R right === !(!left U_I !right)
       final notLeft = Not<T>(f.left);
       final notRight = Not<T>(f.right);
       final untilFormula = Until<T>(notLeft, notRight);
@@ -265,81 +341,70 @@ EvaluationResult _evaluateRecursive<T>(Trace<T> trace, Formula<T> formula, int i
     // --- MTL Operators ---
 
     case EventuallyTimed<T> f: // F_I phi
-      final interval = f.interval;
-      if (index >= trace.length)
-        return EvaluationResult.failure('EventuallyTimed evaluated on empty trace suffix.', relatedIndex: index);
-      final startTime = trace.events[index].timestamp;
+      if (currentIndexTimestamp == null) {
+        // Can't evaluate timed interval from past end of trace
+        return EvaluationResult.failure('EventuallyTimed evaluated past trace end.', relatedIndex: index);
+      }
       for (var k = index; k < trace.length; k++) {
-        final currentTime = trace.events[k].timestamp;
-        final timeOffset = currentTime - startTime;
-        // Check if time k is within the interval relative to time at index
-        if (interval.contains(timeOffset)) {
+        final Duration timeDiff = trace.events[k].timestamp - currentIndexTimestamp;
+        // Optimization: if time difference exceeds interval, operand cannot hold within it later
+        if (timeDiff > f.interval.upperBound) break;
+
+        if (f.interval.contains(timeDiff)) {
           final stepResult = _evaluateRecursive(trace, f.operand, k);
           if (stepResult.holds) {
-            return const EvaluationResult.success(); // Found a point in interval where operand holds
+            // Found a point within the interval where operand holds
+            return const EvaluationResult.success();
           }
         }
-        // Optimization: If current time is past the interval's upper bound,
-        // no future k can satisfy the interval constraint.
-        if (timeOffset > interval.upperBound) {
-          break;
-        }
       }
-      // No point k found within interval where operand holds
-      return EvaluationResult.failure('EventuallyTimed failed: Operand never held within $interval.',
-          relatedIndex: index, relatedTimestamp: trace.events[index].timestamp);
+      // Operand never held within the interval I relative to index
+      return EvaluationResult.failure('EventuallyTimed failed: Operand never held within interval ${f.interval}.',
+          relatedIndex: index, relatedTimestamp: currentIndexTimestamp);
 
     case AlwaysTimed<T> f: // G_I phi
-      final interval = f.interval;
-      if (index >= trace.length) return const EvaluationResult.success(); // G_I phi is vacuously true on empty suffix
-
-      final startTime = trace.events[index].timestamp;
-
+      if (currentIndexTimestamp == null) {
+        // Vacuously true if evaluated past end of trace (no points in interval)
+        return const EvaluationResult.success();
+      }
       for (var k = index; k < trace.length; k++) {
-        final currentEvent = trace.events[k];
-        final timeOffset = currentEvent.timestamp - startTime;
+        final Duration timeDiff = trace.events[k].timestamp - currentIndexTimestamp;
+        // Optimization: if time difference exceeds interval, no need to check further
+        if (timeDiff > f.interval.upperBound) break;
 
-        // Only evaluate operand if time k is within the interval
-        if (interval.contains(timeOffset)) {
+        if (f.interval.contains(timeDiff)) {
           final stepResult = _evaluateRecursive(trace, f.operand, k);
           if (!stepResult.holds) {
-            // Found a violation within the interval
+            // Found a point within interval where operand fails
             return EvaluationResult.failure(
-                'AlwaysTimed failed: ${stepResult.reason ?? "Operand failed"} within $interval',
+                'AlwaysTimed failed: ${stepResult.reason ?? "Operand failed"} within interval ${f.interval}.',
                 relatedIndex: k,
-                relatedTimestamp: currentEvent.timestamp);
+                relatedTimestamp: trace.events[k].timestamp);
           }
         }
-        // Optimization: If time offset exceeds upper bound, no further points matter for G_I
-        if (timeOffset > interval.upperBound) {
-          break;
-        }
       }
-      // No violation found within the interval (or no points were in the interval)
+      // Operand held for all points within the interval I relative to index,
+      // or no points existed in the interval (vacuously true).
       return const EvaluationResult.success();
 
     case UntilTimed<T> f: // left U_I right
-      final interval = f.interval;
-      if (index >= trace.length)
-        return EvaluationResult.failure('UntilTimed evaluated on empty trace suffix.', relatedIndex: index);
-
-      final startTime = trace.events[index].timestamp;
-
+      if (currentIndexTimestamp == null) {
+        return EvaluationResult.failure('UntilTimed evaluated past trace end.', relatedIndex: index);
+      }
       for (var k = index; k < trace.length; k++) {
-        final currentEventK = trace.events[k];
-        final timeOffsetK = currentEventK.timestamp - startTime;
+        final Duration timeDiff = trace.events[k].timestamp - currentIndexTimestamp;
 
-        // Check if Right holds at k AND k is within the interval
-        if (interval.contains(timeOffsetK)) {
+        // Check if right operand holds within interval first
+        if (timeDiff <= f.interval.upperBound && f.interval.contains(timeDiff)) {
           final rightResult = _evaluateRecursive(trace, f.right, k);
           if (rightResult.holds) {
-            // Right holds at k within interval. Check if Left held for all j in [index, k)
+            // Right holds at k within interval. Now check if Left held until k.
             for (var j = index; j < k; j++) {
               final leftResult = _evaluateRecursive(trace, f.left, j);
               if (!leftResult.holds) {
-                // Left failed before Right held at k within interval
+                // Left failed before Right held within interval
                 return EvaluationResult.failure(
-                    'UntilTimed failed: Left operand failed before right held within $interval (${leftResult.reason ?? "Left failed"})',
+                    'UntilTimed failed: Left operand failed before right held within interval ${f.interval} (${leftResult.reason ?? "Left failed"}).',
                     relatedIndex: j,
                     relatedTimestamp: trace.events[j].timestamp);
               }
@@ -347,33 +412,55 @@ EvaluationResult _evaluateRecursive<T>(Trace<T> trace, Formula<T> formula, int i
             // Left held for all j in [index, k)
             return const EvaluationResult.success();
           }
-          // Right didn't hold at k (which was in interval). Fall through to check Left@k
         }
 
-        // Left must hold at k if Right didn't hold at k (or if k wasn't in interval yet)
-        // OR if k was in interval but Right didn't hold.
+        // Optimization: If we passed the interval, right can't hold within it later.
+        if (timeDiff > f.interval.upperBound) break;
+
+        // If right didn't hold at k (or k wasn't in interval yet), left must hold at k to continue.
         final leftResult = _evaluateRecursive(trace, f.left, k);
         if (!leftResult.holds) {
           // Left failed before Right held within interval
           return EvaluationResult.failure(
-              'UntilTimed failed: Left operand failed before right held within $interval (${leftResult.reason ?? "Left failed"})',
+              'UntilTimed failed: Left operand failed before right held within interval ${f.interval} (${leftResult.reason ?? "Left failed"}).',
               relatedIndex: k,
-              relatedTimestamp: currentEventK.timestamp);
-        }
-
-        // Optimization: If we are past the interval, and haven't found a suitable k yet,
-        // we can stop searching for a k *within* the interval.
-        if (timeOffsetK > interval.upperBound) {
-          break;
+              relatedTimestamp: trace.events[k].timestamp);
         }
       }
-      // Loop finished: Right never held within the interval while Left held
-      return EvaluationResult.failure('UntilTimed failed: Right operand never held within $interval while Left held.',
-          relatedIndex: index, relatedTimestamp: trace.events[index].timestamp);
 
+      // Loop finished: Right never held within the interval I
+      return EvaluationResult.failure('UntilTimed failed: Right operand never held within interval ${f.interval}.',
+          relatedIndex: index, relatedTimestamp: currentIndexTimestamp);
+
+    case ReleaseTimed<T> f: // left R_I right
+      // Evaluate !(!left U_I !right)
+      final notLeft = Not<T>(f.left);
+      final notRight = Not<T>(f.right);
+      final untilNotLeftNotRight = UntilTimed<T>(notLeft, notRight, f.interval);
+      final evalUntil = _evaluateRecursive(trace, untilNotLeftNotRight, index);
+      // Release holds if the Until fails
+      return EvaluationResult(!evalUntil.holds,
+          reason: evalUntil.holds
+              ? 'ReleaseTimed failed: Corresponding ¬(${f.left}) U_${f.interval} ¬(${f.right}) held'
+              : null,
+          relatedIndex: evalUntil.relatedIndex,
+          relatedTimestamp: evalUntil.relatedTimestamp);
+    case WeakUntilTimed<T> f: // left W_I right === G_I left or (left U_I right)
+      // Try G_I left first
+      final alwaysLeft = AlwaysTimed<T>(f.left, f.interval);
+      final alwaysResult = _evaluateRecursive(trace, alwaysLeft, index);
+      if (alwaysResult.holds) return const EvaluationResult.success();
+
+      // If G_I left fails, try left U_I right
+      final untilLeftRight = UntilTimed<T>(f.left, f.right, f.interval);
+      final untilResult = _evaluateRecursive(trace, untilLeftRight, index);
+      return untilResult; // Result is the result of the Until
+
+    // --- Default: Unknown Formula Type ---
     default:
-      // Should not happen if all Formula subtypes are handled
-      throw UnimplementedError('Evaluation logic for formula type ${formula.runtimeType} not implemented.');
+      // Potentially handle LTL operators here if not done above
+      // Or throw an error for unsupported types
+      return EvaluationResult.failure('Unsupported formula type encountered: ${formula.runtimeType}');
   }
 }
 

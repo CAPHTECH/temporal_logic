@@ -3,8 +3,7 @@ import 'dart:async'; // Needed for StreamController
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 // Prefixed imports to potentially avoid conflicts, though less likely here
-import 'package:temporal_logic_core/temporal_logic_core.dart' as temporal_core
-    hide LogicalConnectives; // Hide core extensions
+import 'package:temporal_logic_core/temporal_logic_core.dart' as temporal_core; // Hide core extensions
 import 'package:temporal_logic_flutter/temporal_logic_flutter.dart' as temporal_flutter;
 import 'package:temporal_logic_mtl/temporal_logic_mtl.dart' as temporal_mtl;
 
@@ -53,9 +52,6 @@ class MyHomePage extends ConsumerStatefulWidget {
 
 class _MyHomePageState extends ConsumerState<MyHomePage> {
   // --- Define Operands (Atomic Propositions) using state helper ---
-  static final operandVisible =
-      temporal_flutter.state<SnackbarState>((s) => s == SnackbarState.visible, name: 'visible' // Add optional name
-          );
   static final operandHidden =
       temporal_flutter.state<SnackbarState>((s) => s == SnackbarState.hidden, name: 'hidden' // Add optional name
           );
@@ -231,7 +227,6 @@ class _MyHomePageState extends ConsumerState<MyHomePage> {
           tooltip = 'State Not Sustained';
           break;
         case temporal_flutter.CheckStatus.pending:
-        default:
           tooltip = 'Sustained Check Pending';
           break;
       }
@@ -250,7 +245,6 @@ class _MyHomePageState extends ConsumerState<MyHomePage> {
           color = Colors.red;
           break;
         case temporal_flutter.CheckStatus.pending:
-        default:
           icon = Icons.hourglass_empty;
           color = Colors.orange;
           break;

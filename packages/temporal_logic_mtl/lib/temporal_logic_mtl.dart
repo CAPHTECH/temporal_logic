@@ -47,7 +47,9 @@ export 'src/mtl_operators.dart'
         evaluateMtlTrace, // New primary evaluator
         EventuallyTimed, // New AST node
         AlwaysTimed, // New AST node
-        UntilTimed; // New AST node
+        UntilTimed, // New AST node
+        ReleaseTimed, // Export ReleaseTimed
+        WeakUntilTimed; // Export WeakUntilTimed
 // Keep deprecated functions exported for backward compatibility? Or remove?
 // Decide based on desired breakage. For now, keep them exported but deprecated.
 // export 'src/mtl_operators.dart'
