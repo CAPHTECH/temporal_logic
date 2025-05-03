@@ -400,20 +400,21 @@ Flutter 統合用に設計されたヘルパークラスです。実行中のア
 カスタム `flutter_test` マッチャーで、時制論理の評価を `expect` ステートメントに直接統合し、テストの読みやすさを向上させます。
 
 - **`Matcher satisfiesLtl<T>(Formula<T> formula)`**
-  - **目的： 指定された `Trace<T>` が与えられた LTL `formula` を満たすかどうかを確認する `Matcher` を作成します。
-- **仕組み： 内部では、このマッチャーは `expect` に渡されたトレースに対して LTL 評価関数(`evaluateMtlTrace` と類似していますが、LTL 向けに最適化されている可能性があります)を呼び出します。
-- **使用方法：
+  - **目的：** 指定された `Trace<T>` が与えられた LTL `formula` を満たすかどうかを確認する `Matcher` を作成します。
+  - **仕組み：** 内部では、このマッチャーは `expect` に渡されたトレースに対して LTL 評価関数 (`temporal_logic_core` の `evaluateTrace` など) を呼び出します。
+  - **使用方法：**
 
-```dart
-final trace = recorder.trace;
-final ltlFormula = always(isSuccess.implies(isError.not()));
-expect(trace, satisfiesLtl(ltlFormula));
+      ```dart
+      final trace = recorder.trace;
+      final ltlFormula = always(isSuccess.implies(isError.not()));
+      expect(trace, satisfiesLtl(ltlFormula));
 
-// 否定形も可能です：
-expect(failedTrace, isNot(satisfiesLtl(ltlFormula)));
-```
+      // 否定形も可能です：
+      expect(failedTrace, isNot(satisfiesLtl(ltlFormula)));
+      ```
 
-- **失敗時の出力：** マッチが失敗した場合、通常は説明的なエラーメッセージが提供され、多くの場合、基盤となる `EvaluationResult` から理由を含み、トレース内で式が違反した場所と理由を示します。
+  - **失敗時の出力：** マッチが失敗した場合、通常は説明的なエラーメッセージが提供され、多くの場合、基盤となる `EvaluationResult` から理由を含み、トレース内で式が違反した場所と理由を示します。
+  - **❗ ウィジェットテストに関する重要な注意：** このマッチャーは便利ですが、Flutter ウィジェットテスト、特に複雑なフォーミュラ (例: `P.and(eventually(Q))`) や `TraceRecorder` によって動的に生成されたトレースを使用する場合、一貫性のない動作 (ちらつき) を示すことがあります。これは、テスト環境の非同期性とマッチャーとの相互作用に起因する可能性が高いです。**ウィジェットテストで信頼性の高いテストを行うためには、`temporal_logic_core` の `evaluateTrace` を直接呼び出して結果をアサートすることを強く推奨します。** 詳細は以下のクックブックの「ウィジェットテストでのテスト」セクションを参照してください。
 
 ## 5. クックブック \& ベストプラクティス
 
@@ -661,41 +662,48 @@ Flutterアプリケーションは、ネットワークリクエスト、デー�
 - **中間状態： 非同期操作は複数の状態変更を伴うことが多く(例： `initial -> loading -> success` や `initial -> loading -> error`)。正確な時間的検証のため、*すべての*関連する中間状態を捕捉することが重要です。
 - **タイミング： MTL テストでは、これらの状態変更がトリガーとなるアクションに対するタイミングが主要な焦点です。
 
-**テクニック：
+**テクニック：**
 
 1. **状態管理リスナー(主要な方法)： Riverpod の例(セクション 5.1)で示されるように、状態管理のリスナーメカニズム(`container.listen`、`bloc.stream.listen`)を使用するのが最も堅牢な方法です。リスナーは、状態オブジェクトが更新されるたびに自動的に `recorder.record()` を呼び出します。これは、同期的にトリガーされたか非同期的にトリガーされたかにかかわらず機能します。
 
-2. **`tester.pumpAndSettle()`： これは非同期操作のための最も重要な `flutter_test` ユーティリティです。
+2. **`tester.pumpAndSettle()`：** 非同期アクション (`tap`, `enterText`) をトリガーした後に重要です。Future/Stream/Timer/Animation が完了するのを許可し、検証前に後続の状態変更が記録されるようにします。
 
-- **機能： クロックを進め、フレームがスケジュールされなくなるまで繰り返しフレームをプッシュします。これにより、`Future` が完了し、`Stream` イベントが配信され、タイマーが発火し、アニメーションが完了します(デフォルトのタイムアウト内)。
-  - **使用タイミング： 非同期操作をトリガーするアクション(例： データを取得するボタンをタップする)を実行した*後*に、`await tester.pumpAndSettle()` を呼び出します。
-- **トレースへの影響： これにより、非同期操作による状態変更(リスナーでキャプチャされたもの)が、`expect` 検証ステップに進む*前*に記録されます。
+3. **一時的なイベントの処理：** `TraceRecorder` を使用して特定のイベントマーカーを手動で記録します (該当セクション参照)。
+
+**ウィジェットテストにおける信頼性の高い LTL/MTL 検証：**
+
+`satisfiesLtl` API の説明で述べたように、`expect` 内で `satisfiesLtl` マッチャーを使用すると、テスト環境との相互作用により、複雑なウィジェットテストシナリオで一貫性のない結果が生じる可能性があります。
+
+**推奨される最も信頼性の高いアプローチは、`evaluateTrace` 関数 (`temporal_logic_core` から) を直接使用することです：**
 
 ```dart
-// 非同期データ取得と状態更新をトリガーするアクション
-await tester.tap(find.byKey(const Key('fetchButton')));
-// *** 重要なステップ ***
-// 取得の Future が完了し、状態通知が更新され、
-// リスナーが最終状態(および中間状態)を記録するのを待つ。
-await tester.pumpAndSettle();
+// ウィジェットテストでの推奨アプローチ：
+import 'package:temporal_logic_core/temporal_logic_core.dart';
+import 'package:flutter_test/flutter_test.dart';
+// ... 他のインポート ...
 
-// トレースには 'initial'， 'loading'， 'success/error' などの状態が含まれるはずです
-final trace = recorder.trace;
-expect(trace, satisfiesLtl(/* ... ロード後に成功/エラーが発生する式をチェック ... */));
+testWidgets('LTL プロパティを確実に検証する', (tester) async {
+  // ... TraceRecorder のセットアップ、ウィジェットとの対話 ...
+  await tester.pumpAndSettle(); // 状態が安定するのを保証
+
+  final trace = recorder.trace;
+  final formula = /* ... LTL フォーミュラを定義 ... */;
+
+  // 1. evaluateTrace を直接呼び出す
+  final EvaluationResult result = evaluateTrace(trace, formula);
+
+  // 2. 結果の 'holds' プロパティをアサートする
+  expect(
+    result.holds,
+    isTrue,
+    reason: 'LTL フォーミュラは保持されるべきです。失敗理由: ${result.reason}',
+  );
+
+  // 回避： expect(trace, satisfiesLtl(formula));
+});
 ```
 
-3. **`tester.pump(Duration duration)`：
-    - **機能：** 指定された `duration` 分のシミュレートされた時間を進め、単一のフレームをポンプします。
-
-- **使用シーン：** 一般的な LTL 検証ではあまり使用されませんが、以下の場合に有用です：
-- **MTL：** 特定の時間窓内のプロパティをテストするには、時間を明示的に制御する必要があります。
-- **アニメーション： アニメーションをフレーム単位でステップ実行します。
-        -**デバウンス/スロットリング： 特定の遅延後の動作を検証します。
-- **注意： `pump` は時間のみを進め、*その特定のフレーム* にスケジュールされた作業を処理します。`Future` の完了を保証する`pumpAndSettle` とは異なります。複数の`pump` 呼び出しまたは`pumpAndSettle` との組み合わせが必要になる場合があります。
-
-4. **偽の時間プロバイダー：** MTL テストで時間を正確に制御するには、テスト内で手動で進められる偽の `TimeProvider` を `TraceRecorder` に注入します。
-
-**要約： 状態リスナーを使用してすべての状態をキャプチャし、アクションをトリガーした後に `pumpAndSettle` を呼び出して、検証前に非同期更新がトレースに反映されるようにします。
+この直接評価メソッドは、ウィジェットテスト環境内でのマッチャーの潜在的な不整合を回避し、より安定した信頼性の高いテストにつながります。
 
 ### 一時的なイベントの処理 (`loginClicked`)
 

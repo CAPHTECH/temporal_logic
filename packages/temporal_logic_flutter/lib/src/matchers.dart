@@ -13,6 +13,22 @@ import 'package:temporal_logic_core/temporal_logic_core.dart';
 /// final formula = state<MyState>((s) => s.isReady).always();
 /// expect(trace, satisfiesLtl(formula));
 /// ```
+///
+/// **Important Note for Widget Tests:**
+/// While convenient, this matcher may exhibit inconsistent behavior (flickering)
+/// in Flutter widget tests, especially with complex formulas (e.g., involving
+/// `and` combined with temporal operators like `eventually`) or traces generated
+/// dynamically via `TraceRecorder`. This is likely due to interactions with the
+/// test environment's async nature.
+///
+/// **For reliable testing in widget tests, it is strongly recommended to call
+/// `evaluateTrace` from `temporal_logic_core` directly and assert the result:**
+/// ```dart
+/// import 'package:temporal_logic_core/temporal_logic_core.dart';
+/// // ... in testWidgets ...
+/// final result = evaluateTrace(trace, formula);
+/// expect(result.holds, isTrue);
+/// ```
 Matcher satisfiesLtl<T>(Formula<T> formula) {
   return _SatisfiesLtlMatcher<T>(formula);
 }

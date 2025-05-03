@@ -11,6 +11,32 @@ Matcher _isFailure({dynamic reason = anything, dynamic relatedIndex = anything, 
         .having((e) => e.relatedIndex, 'relatedIndex', relatedIndex)
         .having((e) => e.relatedTimestamp, 'relatedTimestamp', relatedTimestamp);
 
+// Minimal state snapshot representation for bug repro
+class MinimalSnap {
+  final bool isLoading;
+  final bool hasData;
+  final bool hasError;
+
+  MinimalSnap({this.isLoading = false, this.hasData = false, this.hasError = false});
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is MinimalSnap &&
+          runtimeType == other.runtimeType &&
+          isLoading == other.isLoading &&
+          hasData == other.hasData &&
+          hasError == other.hasError;
+
+  @override
+  int get hashCode => isLoading.hashCode ^ hasData.hashCode ^ hasError.hashCode;
+
+  @override
+  String toString() {
+    return 'MinimalSnap(isLoading: $isLoading, hasData: $hasData, hasError: $hasError)';
+  }
+}
+
 void main() {
   // --- Setup ---
   // Simple state type and predicates for testing
@@ -437,6 +463,55 @@ void main() {
       // Check innerWeakUntil at 5 -> Fails.
       // Right side (innerWeakUntil) never holds. -> Outer Until fails.
       expect(evaluateTrace(trace, formula, startIndex: 4), _isFailure(reason: contains("Right operand never held")));
+    });
+  });
+
+  group('evaluateTrace - Bug Reproduction Cases', () {
+    // --- LTL Propositions ---
+    final isLoading = state<MinimalSnap>((s) => s.isLoading, name: 'isLoading');
+    final hasData = state<MinimalSnap>((s) => s.hasData, name: 'hasData');
+    final hasError = state<MinimalSnap>((s) => s.hasError, name: 'hasError');
+
+    // P: Initial state (loading, no data, no error)
+    final initialStateP = isLoading.and(hasData.not()).and(hasError.not());
+    // Q: Final state (not loading, has data, no error)
+    final finalStateQ = isLoading.not().and(hasData).and(hasError.not());
+
+    // --- Trace Creation ---
+    // Simple trace: State P -> State Q
+    final trace_P_Q = Trace<MinimalSnap>([
+      TraceEvent(
+          value: MinimalSnap(isLoading: true, hasData: false, hasError: false),
+          timestamp: Duration.zero), // State P @ 0
+      TraceEvent(
+          value: MinimalSnap(isLoading: false, hasData: true, hasError: false),
+          timestamp: const Duration(milliseconds: 100)), // State Q @ 1
+    ]);
+
+    test('BugRepro: P holds initially', () {
+      expect(evaluateTrace(trace_P_Q, initialStateP, startIndex: 0), _isSuccess());
+    });
+
+    test('BugRepro: eventually(Q) holds', () {
+      expect(evaluateTrace(trace_P_Q, eventually(finalStateQ), startIndex: 0), _isSuccess());
+    });
+
+    test('BugRepro: P.and(eventually(Q)) should hold', () {
+      // The combined formula that was failing with satisfiesLtl
+      final formulaCombined = initialStateP.and(eventually(finalStateQ));
+
+      // Directly evaluate using the core evaluator
+      final result = evaluateTrace(trace_P_Q, formulaCombined, startIndex: 0);
+
+      // --- Verification ---
+      // Expected: The formula should hold because P holds at index 0 AND
+      // eventually(Q) holds starting at index 0 (because Q holds at index 1).
+      expect(result, _isSuccess(), reason: 'Expected P && F(Q) to hold on trace [P, Q]');
+
+      // If it fails, print the reason
+      if (!result.holds) {
+        print('BugRepro test failed. EvaluationResult: $result');
+      }
     });
   });
 
