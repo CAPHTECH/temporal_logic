@@ -466,6 +466,168 @@ void main() {
     });
   });
 
+  group('evaluateTrace - Nested Until', () {
+    // (a U b) U c
+    test('(a U b) U c - c holds immediately', () {
+      // Trace: [1, 2, 3]
+      final trace = Trace.fromList([1, 2, 3]);
+      final a = pFalse; // doesn't matter since c holds immediately
+      final b = pFalse;
+      final c = pTrue; // holds at index 0
+      final formula = until(until(a, b), c);
+      // c holds immediately, so outer Until succeeds regardless of inner
+      expect(evaluateTrace(trace, formula, startIndex: 0), _isSuccess());
+    });
+
+    test('(a U b) U c - inner holds but c never holds', () {
+      // Trace: [0, 1, 2, 3]
+      final trace = Trace.fromList([0, 1, 2, 3]);
+      // inner: pEven U pPos -> pPos holds at index 1, pEven holds at index 0 -> inner holds at 0
+      // outer: (pEven U pPos) U pFalse -> right (pFalse) never holds
+      final formula = until(until(pEven, pPos), pFalse);
+      expect(evaluateTrace(trace, formula, startIndex: 0),
+          _isFailure(reason: contains('Right operand never held')));
+    });
+
+    test('(a U b) U c - inner fails, c holds later', () {
+      // Trace: [1, 3, 0, 2]
+      final trace = Trace.fromList([1, 3, 0, 2]);
+      // inner: pEven U pZero -> pZero at idx 2, but pEven fails at idx 0 (1 is odd)
+      // outer: (inner) U pEven -> pEven at idx 3 (2 is even)
+      // For outer Until: need (inner) to hold at idx 0, 1, 2.
+      // inner at 0: pEven U pZero fails (pEven fails at 0)
+      // So outer fails at index 0 (left failed before right held)
+      final formula = until(until(pEven, pZero), pEven);
+      expect(evaluateTrace(trace, formula, startIndex: 0), _isFailure());
+    });
+
+    test('(a U b) U c - neither inner nor c holds', () {
+      final trace = Trace.fromList([1, 3, 5]);
+      // inner: pEven U pZero -> pEven fails at 0, pZero never holds
+      // outer: (inner) U pFalse -> inner fails, pFalse never holds
+      final formula = until(until(pEven, pZero), pFalse);
+      expect(evaluateTrace(trace, formula, startIndex: 0), _isFailure());
+    });
+  });
+
+  group('evaluateTrace - Release Combinations', () {
+    test('(p R q) R r - nested release', () {
+      // Trace: [2, 4, 6] (all even, all positive)
+      final trace = Trace.fromList([2, 4, 6]);
+      // inner: pFalse R pTrue -> !(pTrue U pFalse) -> !(F) -> T
+      // outer: (inner) R pEven -> !(!(inner) U !pEven) -> !(!T U !pEven) -> !(pFalse U pOdd) -> !(F) -> T
+      final formula = Release(Release(pFalse, pTrue), pEven);
+      expect(evaluateTrace(trace, formula, startIndex: 0), _isSuccess());
+    });
+
+    test('(p R q) U r - release then until', () {
+      // Trace: [2, 4, 0, 3]
+      final trace = Trace.fromList([2, 4, 0, 3]);
+      // inner: pFalse R pEven -> !(pTrue U Not(pEven)) -> pTrue U pOdd
+      // pOdd holds at 3 (idx 3), pTrue holds until then -> Until holds -> Not(Until) = false
+      // inner is false. So (inner) U pZero -> left (inner) fails at idx 0
+      final formula = until(Release(pFalse, pEven), pZero);
+      expect(evaluateTrace(trace, formula, startIndex: 0), _isFailure());
+    });
+
+    test('p U (q R r)', () {
+      // Trace: [1, 2, 4, 6]
+      final trace = Trace.fromList([1, 2, 4, 6]);
+      // inner: pFalse R pEven -> !(pTrue U pOdd) -> on suffix starting at some k
+      // At idx 1: pOdd never holds from idx 1 on (2,4,6 all even) -> Until fails -> Release holds
+      // outer: pPos U (pFalse R pEven) -> inner holds at idx 1, pPos at idx 0 -> T
+      final formula = until(pPos, Release(pFalse, pEven));
+      expect(evaluateTrace(trace, formula, startIndex: 0), _isSuccess());
+    });
+  });
+
+  group('evaluateTrace - Deeply Nested Temporal', () {
+    test('G(F(G(p))) - stable true tail', () {
+      // Trace: [1, 0, 0, 0, 0]
+      final trace = Trace.fromList([1, 0, 0, 0, 0]);
+      // G(F(G(pZero))): For each index i, F(G(pZero)) must hold.
+      // At idx 0: F(G(pZero)) -> G(pZero) at idx 1: all 0s from 1 onward -> holds
+      // At idx 1: G(pZero) at idx 1 holds
+      // At idx 2-4: G(pZero) from idx 2-4 holds
+      expect(evaluateTrace(trace, always(eventually(always(pZero))), startIndex: 0), _isSuccess());
+    });
+
+    test('G(F(G(p))) - false last state', () {
+      // Trace: [0, 0, 0, 1]
+      final trace = Trace.fromList([0, 0, 0, 1]);
+      // G(F(G(pZero))): At idx 3: F(G(pZero)) -> G(pZero) at 3 fails (1 != 0) -> F fails
+      // G fails at idx 3
+      expect(evaluateTrace(trace, always(eventually(always(pZero))), startIndex: 0), _isFailure());
+    });
+
+    test('F(G(F(p))) - alternating', () {
+      // Trace: [1, 0, 1, 0, 1]
+      final trace = Trace.fromList([1, 0, 1, 0, 1]);
+      // F(G(F(pZero))): Need G(F(pZero)) from some index.
+      // G(F(pZero)) at idx 0: F(pZero) at each idx.
+      //   idx 0: pZero at 1 -> T. idx 1: pZero at 1 -> T. idx 2: pZero at 3 -> T.
+      //   idx 3: pZero at 3 -> T. idx 4: F(pZero) at 4 -> pZero never holds from 4 (val=1) -> F
+      // G(F(pZero)) at 0 fails.
+      // Try G(F(pZero)) at idx 1: F(pZero) at 1(T), 2(at 3, T), 3(T), 4(F) -> fails
+      // Never holds -> F(G(F(pZero))) = false
+      expect(evaluateTrace(trace, eventually(always(eventually(pZero))), startIndex: 0), _isFailure());
+    });
+
+    test('F(G(F(p))) - eventually becomes recurring', () {
+      // Trace: [1, 1, 0, 1, 0]
+      final trace = Trace.fromList([1, 1, 0, 1, 0]);
+      // G(F(pZero)) from idx 2: F(pZero) at 2(T), 3(at 4, T), 4(T) -> all hold
+      // F(G(F(pZero))) holds at idx 2
+      expect(evaluateTrace(trace, eventually(always(eventually(pZero))), startIndex: 0), _isSuccess());
+    });
+  });
+
+  group('evaluateTrace - Mixed Binary Operators', () {
+    test('(p && q) U r', () {
+      // Trace: [2, 4, 0, 3] -> [even&!pos, even&pos, even&zero, odd&pos]
+      final trace = Trace.fromList([2, 4, 0, 3]);
+      // (pEven && pPos) U pZero
+      // pZero at idx 2. (pEven && pPos) at idx 0: 2 is even, 2 > 0 -> T.
+      // At idx 1: 4 is even, 4 > 0 -> T. Left holds until idx 2.
+      final formula = until(And(pEven, pPos), pZero);
+      expect(evaluateTrace(trace, formula, startIndex: 0), _isSuccess());
+    });
+
+    test('(p && q) U r - left fails early', () {
+      // Trace: [1, 4, 0, 3]
+      final trace = Trace.fromList([1, 4, 0, 3]);
+      // (pEven && pPos) U pZero
+      // pZero at idx 2. (pEven && pPos) at idx 0: 1 is odd -> fails
+      final formula = until(And(pEven, pPos), pZero);
+      expect(evaluateTrace(trace, formula, startIndex: 0), _isFailure());
+    });
+
+    test('(p || q) R r', () {
+      // Trace: [2, 4, 6] (all even, all positive)
+      final trace = Trace.fromList([2, 4, 6]);
+      // (pPos || pZero) R pEven
+      // Release = !(!left U !right) = !(!(pPos||pZero) U !pEven)
+      // !(pPos||pZero) at any idx: all are positive, so Or holds, Not fails.
+      // !(pPos||pZero) is false at every idx -> Until fails (left never holds) -> Release = true
+      final formula = Release(Or(pPos, pZero), pEven);
+      expect(evaluateTrace(trace, formula, startIndex: 0), _isSuccess());
+    });
+
+    test('(p || q) R r - r fails', () {
+      // Trace: [2, 3, 4]
+      final trace = Trace.fromList([2, 3, 4]);
+      // (pZero || pFalse) R pEven
+      // Release = !(!left U !right) = !(!(pZero||pFalse) U !pEven)
+      // !(pZero||pFalse): at 0: pZero=F, pFalse=F -> Or=F, Not=T.
+      //                  at 1: pZero=F, pFalse=F -> Or=F, Not=T.
+      // !pEven: at 0: F (2 is even). at 1: T (3 is odd). at 2: F (4 is even).
+      // Until: Not(Or) U Not(pEven) -> T at 0, T at 1; Not(pEven) at 1 -> Until holds
+      // Release = !true = false
+      final formula = Release(Or(pZero, pFalse), pEven);
+      expect(evaluateTrace(trace, formula, startIndex: 0), _isFailure());
+    });
+  });
+
   group('evaluateTrace - Bug Reproduction Cases', () {
     // --- LTL Propositions ---
     final isLoading = state<MinimalSnap>((s) => s.isLoading, name: 'isLoading');

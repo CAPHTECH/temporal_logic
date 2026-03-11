@@ -20,5 +20,6 @@ dependencies:
 dev_dependencies:
   lints: ^5.1.1 # Align with temporal_logic_flutter
   test: ^1.24.0 # Test framework
+  glados: ^1.1.7
 
 resolution: workspace
