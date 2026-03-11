@@ -79,6 +79,8 @@ extension TemporalLogicGenerators on Any {
           final events = <TraceEvent<int>>[];
           var ts = Duration.zero;
           for (var i = 0; i < values.length; i++) {
+            // When values outnumber gaps, remaining events share the last
+            // timestamp — this is intentional to exercise concurrent-event paths.
             if (i > 0 && i - 1 < gaps.length) {
               ts += Duration(milliseconds: gaps[i - 1]);
             }

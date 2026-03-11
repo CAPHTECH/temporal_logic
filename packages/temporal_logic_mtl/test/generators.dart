@@ -1,7 +1,8 @@
 import 'package:glados/glados.dart';
 import 'package:temporal_logic_mtl/temporal_logic_mtl.dart';
 
-// Re-use core atoms
+// Intentionally duplicated from core/test/generators.dart for test isolation.
+// Test files are not exported across packages, so sharing is not possible.
 final pEven = state<int>((n) => n % 2 == 0, name: 'pEven');
 final pPos = state<int>((n) => n > 0, name: 'pPos');
 final pZero = state<int>((n) => n == 0, name: 'pZero');
@@ -90,6 +91,8 @@ extension MtlGenerators on Any {
           final events = <TraceEvent<int>>[];
           var ts = Duration.zero;
           for (var i = 0; i < values.length; i++) {
+            // When values outnumber gaps, remaining events share the last
+            // timestamp — this is intentional to exercise concurrent-event paths.
             if (i > 0 && i - 1 < gaps.length) {
               ts += Duration(milliseconds: gaps[i - 1]);
             }
