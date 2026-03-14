@@ -102,7 +102,7 @@ extension MtlGenerators on Any {
         },
       );
 
-  /// TimeInterval with lb <= ub, scaled to plausible trace spans (0-50ms).
+  /// TimeInterval with lb <= ub, lb in 0-50ms, ub in lb..(lb+50)ms.
   Generator<TimeInterval> get timeInterval => combine2(
         intInRange(0, 51),
         intInRange(0, 51),
