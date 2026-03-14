@@ -64,7 +64,7 @@ Formula<int> _buildFromOp(int op, Formula<int> f1, Formula<int> f2) {
     case 9:
       return Release(f1, f2);
     default:
-      return f1;
+      throw StateError('unreachable: op % 10 covers 0-9');
   }
 }
 
