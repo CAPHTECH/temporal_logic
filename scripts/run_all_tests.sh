@@ -1,13 +1,18 @@
 #!/bin/bash
 
-set -e # Exit immediately if a command exits with a non-zero status.
+set -euo pipefail
+
+if ! command -v mise >/dev/null 2>&1; then
+  echo "mise is required to run the pinned Flutter toolchain. Install mise and run 'mise install' first." >&2
+  exit 1
+fi
 
 # Function to run tests in a directory if a 'test' subdirectory exists
 run_tests_if_present() {
   dir=$1
   if [ -d "$dir/test" ]; then
     echo "--- Running tests in $dir ---"
-    (cd "$dir" && fvm flutter test)
+    (cd "$dir" && mise exec -- flutter test)
     echo "--- Finished tests in $dir ---"
     echo ""
   else

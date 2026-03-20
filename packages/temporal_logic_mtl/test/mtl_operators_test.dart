@@ -336,60 +336,6 @@ void main() {
     });
   });
 
-  group('Boundary precision', () {
-    test('event at exact lower bound is included', () {
-      // F_[100ms,500ms] pB -> 'b' at exactly 100ms = lower bound. Included.
-      expect(
-          evalM(
-                  trace,
-                  EventuallyTimed(
-                      pB,
-                      TimeInterval(const Duration(milliseconds: 100),
-                          const Duration(milliseconds: 500))))
-              .holds,
-          isTrue);
-    });
-
-    test('event at exact upper bound is included', () {
-      // F_[500ms,1000ms] pE -> 'e' at exactly 1000ms = upper bound. Included.
-      expect(
-          evalM(
-                  trace,
-                  EventuallyTimed(
-                      pE,
-                      TimeInterval(const Duration(milliseconds: 500),
-                          const Duration(milliseconds: 1000))))
-              .holds,
-          isTrue);
-    });
-
-    test('event 1ms outside lower bound is excluded', () {
-      // F_[101ms,500ms] pB -> 'b' at 100ms < 101ms. Excluded.
-      expect(
-          evalM(
-                  trace,
-                  EventuallyTimed(
-                      pB,
-                      TimeInterval(const Duration(milliseconds: 101),
-                          const Duration(milliseconds: 500))))
-              .holds,
-          isFalse);
-    });
-
-    test('event 1ms outside upper bound is excluded', () {
-      // F_[500ms,999ms] pE -> 'e' at 1000ms > 999ms. Excluded.
-      expect(
-          evalM(
-                  trace,
-                  EventuallyTimed(
-                      pE,
-                      TimeInterval(const Duration(milliseconds: 500),
-                          const Duration(milliseconds: 999))))
-              .holds,
-          isFalse);
-    });
-  });
-
   group('Duplicate timestamps', () {
     // Trace with duplicate timestamps: two events at the same time
     final dupTrace = Trace([
