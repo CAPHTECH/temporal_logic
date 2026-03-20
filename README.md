@@ -145,8 +145,13 @@ print('Specification "$spec" holds on trace: $result'); // Expected output depen
 
 ## Getting Started
 
-1. **Ensure Flutter is installed:** Follow the official [Flutter installation guide](https://docs.flutter.dev/get-started/install).
-2. **Install FVM (Optional but Recommended):** If you prefer using FVM to manage Flutter versions, install it following the [FVM documentation](https://fvm.app/docs/getting_started/installation). This project is configured to use FVM.
+1. **Install mise:** Follow the official [mise installation guide](https://mise.jdx.dev/getting-started.html).
+2. **Install the pinned Flutter SDK:** This repository pins Flutter `3.41.5` in [`mise.toml`](mise.toml).
+
+    ```bash
+    mise install
+    ```
+
 3. **Clone the repository:**
 
     ```bash
@@ -157,23 +162,14 @@ print('Specification "$spec" holds on trace: $result'); // Expected output depen
 4. **Get dependencies:**
 
     ```bash
-    # If using FVM
-    fvm flutter pub get
-
-    # If using system Flutter
-    flutter pub get
+    mise exec -- flutter pub get
     ```
 
 5. **Run tests (Optional):** Navigate to individual package directories (e.g., `packages/temporal_logic_core`) and run tests:
 
     ```bash
-    # If using FVM
     cd packages/temporal_logic_core
-    fvm flutter test
-
-    # If using system Flutter
-    cd packages/temporal_logic_core
-    flutter test
+    mise exec -- flutter test
     ```
 
 ## Contributing
