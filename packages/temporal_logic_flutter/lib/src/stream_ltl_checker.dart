@@ -1,7 +1,6 @@
-import 'dart:async';
+import 'package:temporal_logic_core/temporal_logic_core.dart';
 
-import 'package:temporal_logic_core/temporal_logic_core.dart'; // Import core
-
+import 'formula_stream_checker_base.dart';
 import 'stream_evaluation_start.dart';
 
 /// Provides evaluation of a Linear Temporal Logic (LTL) [Formula]<S>
@@ -18,22 +17,11 @@ import 'stream_evaluation_start.dart';
 /// after the checker is created.
 ///
 /// Type parameter [S] defines the type of the state values.
-class StreamLtlChecker<S> {
-  final Stream<S> _stream;
-  final Formula<S> _formula; // Use Formula<S>
-  final _trace = <S>[]; // Stores the history of states
-  StreamSubscription<S>? _subscription;
-  final _resultController = StreamController<bool>.broadcast();
-  final S? _initialValue; // Optional initial state
+class StreamLtlChecker<S> extends FormulaStreamCheckerBase<S, bool> {
+  final Formula<S> _formula;
+  final _trace = <S>[];
+  final S? _initialValue;
   final StreamEvaluationStart _evaluationStart;
-
-  /// A broadcast [Stream] emitting the boolean result of the LTL [formula]
-  /// evaluation against the current trace.
-  ///
-  /// An initial result is emitted shortly after creation (based on the
-  /// [initialValue] or empty trace). Subsequently, a new result is emitted
-  /// every time a state arrives from the input [stream].
-  Stream<bool> get resultStream => _resultController.stream;
 
   /// Creates an [StreamLtlChecker] that listens to the specified [stream] of
   /// states and evaluates the given LTL [formula].
@@ -46,99 +34,30 @@ class StreamLtlChecker<S> {
   ///   the initial trace is empty.
   /// - [evaluationStart]: Whether to evaluate from the beginning of the
   ///   accumulated trace or from the most recent state.
-  ///
-  /// An initial evaluation is performed based on the trace containing only the
-  /// [initialValue] (if provided) or an empty trace. This initial result is
-  /// emitted on the [resultStream] via `scheduleMicrotask`.
-  ///
-  /// Subsequently, the [formula] is evaluated each time a new state arrives
-  /// on the [stream], and the result is emitted on [resultStream].
   StreamLtlChecker({
     required Stream<S> stream,
-    required Formula<S> formula, // Use Formula<S>
+    required Formula<S> formula,
     S? initialValue,
     StreamEvaluationStart evaluationStart = StreamEvaluationStart.beginning,
-  })  : _stream = stream,
-        _formula = formula,
+  })  : _formula = formula,
         _initialValue = initialValue,
-        _evaluationStart = evaluationStart {
-    if (_initialValue != null) {
-      _trace.add(_initialValue);
+        _evaluationStart = evaluationStart,
+        super(stream) {
+    final initialState = _initialValue;
+    if (initialState != null) {
+      _trace.add(initialState);
     }
-    Object? initialError;
-    StackTrace? initialStackTrace;
-    bool? initialResult;
-
-    try {
-      initialResult = check();
-    } catch (error, stackTrace) {
-      initialError = error;
-      initialStackTrace = stackTrace;
-    }
-
-    // Start listening *after* initial state is determined
-    _startListening();
-    // Schedule the emission of the initial result for the next event loop cycle
-    scheduleMicrotask(() {
-      if (!_resultController.isClosed) {
-        if (initialError != null) {
-          _publishErrorAndClose(initialError!, initialStackTrace);
-          return;
-        }
-        _resultController.add(initialResult!);
-      }
-    });
+    initializeWithInitialEvaluation(check);
   }
 
-  /// Starts listening to the stream.
-  ///
-  /// Initializes the stream subscription and handles incoming events,
-  /// completion, and errors.
-  void _startListening() {
-    _subscription?.cancel(); // Cancel previous subscription if any
-    _subscription = _stream.listen(
-      (newState) {
-        _trace.add(newState);
-        try {
-          _evaluateAndNotify();
-        } catch (error, stackTrace) {
-          _publishErrorAndClose(error, stackTrace);
-        }
-      },
-      onDone: () {
-        // Close the controller when the input stream is done.
-        if (!_resultController.isClosed) {
-          _resultController.close();
-        }
-      },
-      onError: (error) {
-        // Forward errors to the result stream and close it.
-        if (!_resultController.isClosed) {
-          _resultController.addError(error);
-          _resultController.close();
-        }
-      },
-    );
+  @override
+  void onInput(S input) {
+    _trace.add(input);
   }
 
-  void _publishErrorAndClose(Object error, [StackTrace? stackTrace]) {
-    _subscription?.cancel();
-    if (_resultController.isClosed) {
-      return;
-    }
-    _resultController.addError(error, stackTrace);
-    _resultController.close();
-  }
-
-  // Helper function to evaluate and emit result if necessary
-  /// Evaluates the formula and emits the result on the stream controller.
-  void _evaluateAndNotify() {
-    // Evaluate the formula against the current trace
-    final newResult = check();
-    // Always emit the current result
-    if (!_resultController.isClosed) {
-      _resultController.add(newResult);
-    }
+  @override
+  bool evaluateCurrent() {
+    return check();
   }
 
   /// Evaluates the LTL [formula] on the accumulated trace.
@@ -163,11 +82,9 @@ class StreamLtlChecker<S> {
   /// Cancels all subscriptions, timers, and closes the result stream.
   /// Clears the internal trace to free memory. After disposal, no further
   /// results will be emitted.
+  @override
   void dispose() {
-    _subscription?.cancel();
-    if (!_resultController.isClosed) {
-      _resultController.close();
-    }
     _trace.clear();
+    super.dispose();
   }
 }

@@ -1,9 +1,10 @@
-import 'dart:async'; // Keep for Stream type
+import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:temporal_logic_core/temporal_logic_core.dart';
 
-import 'stream_ltl_checker.dart'; // Assuming this exists and is updated
+import 'checker_widget_state_base.dart';
+import 'stream_ltl_checker.dart';
 import 'stream_evaluation_start.dart';
 
 /// A widget that observes a [stream] of state [S] and displays
@@ -70,33 +71,27 @@ class LtlCheckerWidget<S> extends StatefulWidget {
   });
 
   @override
-  // Update the State type
   State<LtlCheckerWidget<S>> createState() => _LtlCheckerWidgetState<S>();
 }
 
-// Changed to State
-class _LtlCheckerWidgetState<S> extends State<LtlCheckerWidget<S>> {
+class _LtlCheckerWidgetState<S>
+    extends CheckerWidgetStateBase<LtlCheckerWidget<S>, bool> {
   late StreamLtlChecker<S> _checker;
-  late bool _initialResult;
 
   @override
-  void initState() {
-    super.initState();
-    _initialResult = _calculateInitialResult();
-    _initializeChecker();
-  }
-
-  bool _calculateInitialResult() {
-    if (widget.initialValue == null) {
+  bool calculateInitialResult() {
+    final initialValue = widget.initialValue;
+    if (initialValue == null) {
       final emptyTrace = Trace<S>.empty();
       return evaluateTrace(emptyTrace, widget.formula).holds;
-    } else {
-      final initialTrace = Trace<S>.fromList([widget.initialValue as S]);
-      return evaluateTrace(initialTrace, widget.formula, startIndex: 0).holds;
     }
+
+    final initialTrace = Trace<S>.fromList([initialValue]);
+    return evaluateTrace(initialTrace, widget.formula, startIndex: 0).holds;
   }
 
-  void _initializeChecker() {
+  @override
+  void initializeChecker() {
     _checker = StreamLtlChecker<S>(
       stream: widget.stream,
       formula: widget.formula,
@@ -106,24 +101,16 @@ class _LtlCheckerWidgetState<S> extends State<LtlCheckerWidget<S>> {
   }
 
   @override
-  void didUpdateWidget(covariant LtlCheckerWidget<S> oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (widget.stream != oldWidget.stream ||
+  bool shouldRecreateChecker(covariant LtlCheckerWidget<S> oldWidget) {
+    return widget.stream != oldWidget.stream ||
         widget.formula != oldWidget.formula ||
         widget.initialValue != oldWidget.initialValue ||
-        widget.evaluationStart != oldWidget.evaluationStart) {
-      _checker.dispose();
-      // Recalculate initial result for the new checker setup,
-      // used if the stream rebuilds before emitting.
-      _initialResult = _calculateInitialResult();
-      _initializeChecker();
-    }
+        widget.evaluationStart != oldWidget.evaluationStart;
   }
 
   @override
-  void dispose() {
+  void disposeChecker() {
     _checker.dispose();
-    super.dispose();
   }
 
   Widget _defaultBuilder(BuildContext context, bool result) {
@@ -136,12 +123,10 @@ class _LtlCheckerWidgetState<S> extends State<LtlCheckerWidget<S>> {
 
   @override
   Widget build(BuildContext context) {
-    return StreamBuilder<bool>(
+    return buildResultStream(
       key: ObjectKey(_checker),
-      initialData: _initialResult,
       stream: _checker.resultStream,
-      builder: (context, snapshot) {
-        final bool result = snapshot.hasData ? snapshot.data! : _initialResult;
+      builder: (context, result) {
         final builder = widget.builder ?? _defaultBuilder;
         return builder(context, result);
       },

@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:temporal_logic_mtl/temporal_logic_mtl.dart';
 
-import 'stream_mtl_checker.dart'; // Import the redesigned checker
+import 'checker_widget_state_base.dart';
+import 'stream_mtl_checker.dart';
 import 'stream_evaluation_start.dart';
 
 /// A widget that observes a [stream] of timed states [TimedValue<S>] and displays
@@ -78,24 +79,19 @@ class MtlCheckerWidget<S> extends StatefulWidget {
   State<MtlCheckerWidget<S>> createState() => _MtlCheckerWidgetState<S>();
 }
 
-class _MtlCheckerWidgetState<S> extends State<MtlCheckerWidget<S>> {
+class _MtlCheckerWidgetState<S>
+    extends CheckerWidgetStateBase<MtlCheckerWidget<S>, EvaluationResult> {
   late StreamMtlChecker<S> _checker;
-  late EvaluationResult _initialResult;
 
   @override
-  void initState() {
-    super.initState();
-    _initialResult = _calculateInitialResult();
-    _initializeChecker();
-  }
-
-  EvaluationResult _calculateInitialResult() {
-    final trace = widget.initialValue == null
+  EvaluationResult calculateInitialResult() {
+    final initialValue = widget.initialValue;
+    final trace = initialValue == null
         ? Trace<S>.empty()
         : Trace<S>([
             TraceEvent(
-              timestamp: widget.initialValue!.timestamp,
-              value: widget.initialValue!.value,
+              timestamp: initialValue.timestamp,
+              value: initialValue.value,
             ),
           ]);
 
@@ -106,8 +102,8 @@ class _MtlCheckerWidgetState<S> extends State<MtlCheckerWidget<S>> {
     );
   }
 
-  // Initializes or re-initializes the underlying StreamMtlChecker.
-  void _initializeChecker() {
+  @override
+  void initializeChecker() {
     _checker = StreamMtlChecker<S>(
       widget.stream,
       formula: widget.formula,
@@ -117,23 +113,16 @@ class _MtlCheckerWidgetState<S> extends State<MtlCheckerWidget<S>> {
   }
 
   @override
-  void didUpdateWidget(covariant MtlCheckerWidget<S> oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    // Re-initialize the checker if the stream, formula, or initialValue changes.
-    if (widget.stream != oldWidget.stream ||
+  bool shouldRecreateChecker(covariant MtlCheckerWidget<S> oldWidget) {
+    return widget.stream != oldWidget.stream ||
         widget.formula != oldWidget.formula ||
         widget.initialValue != oldWidget.initialValue ||
-        widget.evaluationStart != oldWidget.evaluationStart) {
-      _checker.dispose();
-      _initialResult = _calculateInitialResult();
-      _initializeChecker();
-    }
+        widget.evaluationStart != oldWidget.evaluationStart;
   }
 
   @override
-  void dispose() {
+  void disposeChecker() {
     _checker.dispose();
-    super.dispose();
   }
 
   /// The default builder used if [MtlCheckerWidget.builder] is not provided.
@@ -155,19 +144,12 @@ class _MtlCheckerWidgetState<S> extends State<MtlCheckerWidget<S>> {
 
   @override
   Widget build(BuildContext context) {
-    // StreamBuilder listens to the checker's results and rebuilds the UI.
-    return StreamBuilder<EvaluationResult>(
+    return buildResultStream(
       key: ObjectKey(_checker),
       stream: _checker.resultStream,
-      initialData: _initialResult,
-      builder: (context, snapshot) {
-        final evalResult = snapshot.data ?? _initialResult;
-
-        final bool holds = evalResult.holds;
-        final EvaluationResult details = evalResult;
-
+      builder: (context, evalResult) {
         final builder = widget.builder ?? _defaultBuilder;
-        return builder(context, holds, details);
+        return builder(context, evalResult.holds, evalResult);
       },
     );
   }
