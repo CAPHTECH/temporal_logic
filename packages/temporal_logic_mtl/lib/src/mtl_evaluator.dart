@@ -1,4 +1,5 @@
 import 'package:temporal_logic_core/temporal_logic_core.dart';
+import 'package:temporal_logic_core/src/evaluator_common.dart';
 
 import 'mtl_ast.dart';
 
@@ -30,140 +31,18 @@ EvaluationResult _evaluateRecursive<T>(
     currentIndexTimestamp = trace.events[index].timestamp;
   }
 
+  final coreResult = evaluateCoreFormula(
+    trace,
+    formula,
+    index,
+    (nestedFormula, nestedIndex) =>
+        _evaluateRecursive(trace, nestedFormula, nestedIndex),
+  );
+  if (coreResult != null) {
+    return coreResult;
+  }
+
   switch (formula) {
-    case AtomicProposition<T> p:
-      if (index >= trace.length) {
-        return EvaluationResult.failure(
-            'Atomic proposition evaluated past trace end.',
-            relatedIndex: index);
-      }
-      final currentEvent = trace.events[index];
-      final holds = p.predicate(currentEvent.value);
-      return EvaluationResult(holds,
-          reason: !holds ? '${p.name ?? "Atomic"} failed' : null,
-          relatedIndex: index,
-          relatedTimestamp: currentEvent.timestamp);
-
-    case Not<T> f:
-      final innerResult = _evaluateRecursive(trace, f.operand, index);
-      return EvaluationResult(!innerResult.holds,
-          reason:
-              innerResult.holds ? 'Negated formula held' : innerResult.reason,
-          relatedIndex: innerResult.relatedIndex,
-          relatedTimestamp: innerResult.relatedTimestamp);
-
-    case And<T> f:
-      final leftResult = _evaluateRecursive(trace, f.left, index);
-      if (!leftResult.holds) {
-        return leftResult;
-      }
-      return _evaluateRecursive(trace, f.right, index);
-
-    case Or<T> f:
-      final leftResult = _evaluateRecursive(trace, f.left, index);
-      if (leftResult.holds) {
-        return leftResult;
-      }
-      return _evaluateRecursive(trace, f.right, index);
-
-    case Implies<T> f:
-      final leftResult = _evaluateRecursive(trace, f.left, index);
-      if (!leftResult.holds) {
-        return const EvaluationResult.success();
-      }
-      return _evaluateRecursive(trace, f.right, index);
-
-    case Next<T> f:
-      final nextIndex = index + 1;
-      if (nextIndex >= trace.length) {
-        return EvaluationResult.failure('Next evaluated past trace end.',
-            relatedIndex: index);
-      }
-      return _evaluateRecursive(trace, f.operand, nextIndex);
-
-    case Always<T> f:
-      for (var k = index; k < trace.length; k++) {
-        final stepResult = _evaluateRecursive(trace, f.operand, k);
-        if (!stepResult.holds) {
-          return EvaluationResult.failure(
-              'Always failed: ${stepResult.reason ?? "Operand failed"}',
-              relatedIndex: k,
-              relatedTimestamp: trace.events[k].timestamp);
-        }
-      }
-      return const EvaluationResult.success();
-
-    case Eventually<T> f:
-      if (index >= trace.length) {
-        return EvaluationResult.failure(
-            'Eventually evaluated on empty trace suffix.',
-            relatedIndex: index);
-      }
-      for (var k = index; k < trace.length; k++) {
-        final stepResult = _evaluateRecursive(trace, f.operand, k);
-        if (stepResult.holds) {
-          return const EvaluationResult.success();
-        }
-      }
-      return EvaluationResult.failure('Eventually failed: Operand never held.',
-          relatedIndex: index,
-          relatedTimestamp:
-              trace.events.isNotEmpty ? trace.events[index].timestamp : null);
-
-    case Until<T> f:
-      if (index >= trace.length) {
-        return EvaluationResult.failure(
-            'Until evaluated on empty trace suffix.',
-            relatedIndex: index);
-      }
-      for (var k = index; k < trace.length; k++) {
-        final rightResult = _evaluateRecursive(trace, f.right, k);
-        if (rightResult.holds) {
-          for (var j = index; j < k; j++) {
-            final leftResult = _evaluateRecursive(trace, f.left, j);
-            if (!leftResult.holds) {
-              return EvaluationResult.failure(
-                  'Until failed: Left operand failed before right held (${leftResult.reason ?? "Left failed"})',
-                  relatedIndex: j,
-                  relatedTimestamp: trace.events[j].timestamp);
-            }
-          }
-          return const EvaluationResult.success();
-        }
-
-        final leftResult = _evaluateRecursive(trace, f.left, k);
-        if (!leftResult.holds) {
-          return EvaluationResult.failure(
-              'Until failed: Left operand failed before right held (${leftResult.reason ?? "Left failed"})',
-              relatedIndex: k,
-              relatedTimestamp: trace.events[k].timestamp);
-        }
-      }
-      return EvaluationResult.failure('Until failed: Right operand never held.',
-          relatedIndex: index,
-          relatedTimestamp:
-              trace.events.isNotEmpty ? trace.events[index].timestamp : null);
-
-    case WeakUntil<T> f:
-      final alwaysLeftResult =
-          _evaluateRecursive(trace, Always<T>(f.left), index);
-      if (alwaysLeftResult.holds) {
-        return const EvaluationResult.success();
-      }
-      return _evaluateRecursive(trace, Until<T>(f.left, f.right), index);
-
-    case Release<T> f:
-      final notLeft = Not<T>(f.left);
-      final notRight = Not<T>(f.right);
-      final untilFormula = Until<T>(notLeft, notRight);
-      final untilResult = _evaluateRecursive(trace, untilFormula, index);
-      return EvaluationResult(!untilResult.holds,
-          reason: untilResult.holds
-              ? 'Release failed: !(${untilFormula}) held'
-              : 'Release held: !(${untilFormula}) failed (${untilResult.reason ?? "reason unknown"})',
-          relatedIndex: untilResult.relatedIndex,
-          relatedTimestamp: untilResult.relatedTimestamp);
-
     case EventuallyTimed<T> f:
       if (currentIndexTimestamp == null) {
         return EvaluationResult.failure(

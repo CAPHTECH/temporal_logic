@@ -2,8 +2,6 @@
 /// including Stream checkers, Widgets, and test matchers.
 library temporal_logic_flutter;
 
-// --- Core / MTL Exports (Re-exported for convenience) ---
-// Export necessary types/functions from core and mtl packages
 export 'package:temporal_logic_core/temporal_logic_core.dart'
     show
         Formula,
@@ -36,24 +34,16 @@ export 'package:temporal_logic_mtl/temporal_logic_mtl.dart'
         evaluateMtlTrace,
         EventuallyTimed,
         AlwaysTimed,
-        UntilTimed;
+        UntilTimed,
+        ReleaseTimed,
+        WeakUntilTimed;
 
-export 'src/check_status.dart'; // Export the new status enum
+export 'src/check_status.dart';
 export 'src/stream_evaluation_start.dart';
-// Widgets
 export 'src/ltl_checker_widget.dart';
-export 'src/mtl_checker_widget.dart'; // Export the new MTL widget
-// Also exports EvaluationResult, Trace, etc. implicitly from core export
-
-// --- Flutter Specific Components ---
-
-// Stream Checkers
+export 'src/mtl_checker_widget.dart';
 export 'src/stream_ltl_checker.dart';
 export 'src/stream_mtl_checker.dart';
 export 'src/stream_sustained_state_checker.dart';
 export 'src/sustained_state_checker_widget.dart';
-// Trace Recorder
 export 'src/trace_recorder.dart';
-
-// --- Removed Helpers ---
-// export 'src/ltl_helpers.dart'; // Removed, use exports from core
