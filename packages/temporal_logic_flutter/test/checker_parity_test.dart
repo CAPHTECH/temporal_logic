@@ -4,23 +4,30 @@ import 'package:fake_async/fake_async.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:temporal_logic_flutter/temporal_logic_flutter.dart';
 
-/// Documents and verifies the semantic difference between:
-/// - StreamLtlChecker: evaluates formula at the LAST index of the accumulated trace
-/// - StreamMtlChecker: evaluates formula at index 0 of the accumulated trace
-///
-/// This means they can disagree on formulas that are position-sensitive
-/// (e.g., Eventually, Always, Next).
+/// Verifies that StreamLtlChecker and StreamMtlChecker use the same
+/// evaluation-start semantics for pure LTL formulas.
 void main() {
-  // Simple state type
-  final pTrue_f = AtomicProposition<bool>((s) => s, name: 'p');
-  final pFalse_f = AtomicProposition<bool>((s) => !s, name: 'not_p');
+  final pTrue = AtomicProposition<bool>((s) => s, name: 'p');
+  final pFalse = AtomicProposition<bool>((s) => !s, name: 'not_p');
 
-  group('Cases where both checkers agree', () {
-    test('G(p) on uniform true trace', () {
+  void emit(
+    FakeAsync async,
+    StreamController<bool> ltlController,
+    StreamController<TimedValue<bool>> mtlController,
+    bool value,
+    int millis,
+  ) {
+    ltlController.add(value);
+    mtlController.add(TimedValue(value, Duration(milliseconds: millis)));
+    async.flushMicrotasks();
+  }
+
+  group('Default semantics evaluate from the beginning', () {
+    test('Eventually stays true after an early match', () {
       fakeAsync((async) {
         final ltlController = StreamController<bool>();
         final mtlController = StreamController<TimedValue<bool>>();
-        final formula = Always(pTrue_f);
+        final formula = Eventually(pTrue);
 
         final ltlChecker = StreamLtlChecker<bool>(
           stream: ltlController.stream,
@@ -34,25 +41,16 @@ void main() {
         final ltlResults = <bool>[];
         final mtlResults = <bool>[];
         final ltlSub = ltlChecker.resultStream.listen(ltlResults.add);
-        final mtlSub =
-            mtlChecker.resultStream.listen((r) => mtlResults.add(r.holds));
+        final mtlSub = mtlChecker.resultStream
+            .listen((result) => mtlResults.add(result.holds));
 
         async.flushMicrotasks();
+        expect(ltlResults, [false]);
+        expect(mtlResults, [false]);
 
-        // Add uniform true states
-        ltlController.add(true);
-        mtlController.add(TimedValue(
-            true, const Duration(milliseconds: 100)));
-        async.flushMicrotasks();
+        emit(async, ltlController, mtlController, true, 100);
+        emit(async, ltlController, mtlController, false, 200);
 
-        ltlController.add(true);
-        mtlController.add(TimedValue(
-            true, const Duration(milliseconds: 200)));
-        async.flushMicrotasks();
-
-        // Both should agree: G(p) is true on [T, T] regardless of eval index
-        // LTL: evaluates at last index -> G(p) at idx 1 = true (only T remaining)
-        // MTL: evaluates at index 0 -> G(p) at idx 0 = true (all T)
         expect(ltlResults.last, isTrue);
         expect(mtlResults.last, isTrue);
 
@@ -60,14 +58,16 @@ void main() {
         mtlSub.cancel();
         ltlChecker.dispose();
         mtlChecker.dispose();
+        ltlController.close();
+        mtlController.close();
       });
     });
 
-    test('atomic proposition on single event', () {
+    test('Always sees the full accumulated trace', () {
       fakeAsync((async) {
         final ltlController = StreamController<bool>();
         final mtlController = StreamController<TimedValue<bool>>();
-        final formula = pTrue_f;
+        final formula = Always(pTrue);
 
         final ltlChecker = StreamLtlChecker<bool>(
           stream: ltlController.stream,
@@ -81,18 +81,52 @@ void main() {
         final ltlResults = <bool>[];
         final mtlResults = <bool>[];
         final ltlSub = ltlChecker.resultStream.listen(ltlResults.add);
-        final mtlSub =
-            mtlChecker.resultStream.listen((r) => mtlResults.add(r.holds));
+        final mtlSub = mtlChecker.resultStream
+            .listen((result) => mtlResults.add(result.holds));
 
         async.flushMicrotasks();
 
-        // Add single true state
-        ltlController.add(true);
-        mtlController.add(
-            TimedValue(true, const Duration(milliseconds: 100)));
+        emit(async, ltlController, mtlController, false, 100);
+        emit(async, ltlController, mtlController, true, 200);
+
+        expect(ltlResults.last, isFalse);
+        expect(mtlResults.last, isFalse);
+
+        ltlSub.cancel();
+        mtlSub.cancel();
+        ltlChecker.dispose();
+        mtlChecker.dispose();
+        ltlController.close();
+        mtlController.close();
+      });
+    });
+
+    test('Next agrees with MTL on the default start position', () {
+      fakeAsync((async) {
+        final ltlController = StreamController<bool>();
+        final mtlController = StreamController<TimedValue<bool>>();
+        final formula = Next(pTrue);
+
+        final ltlChecker = StreamLtlChecker<bool>(
+          stream: ltlController.stream,
+          formula: formula,
+        );
+        final mtlChecker = StreamMtlChecker<bool>(
+          mtlController.stream,
+          formula: formula,
+        );
+
+        final ltlResults = <bool>[];
+        final mtlResults = <bool>[];
+        final ltlSub = ltlChecker.resultStream.listen(ltlResults.add);
+        final mtlSub = mtlChecker.resultStream
+            .listen((result) => mtlResults.add(result.holds));
+
         async.flushMicrotasks();
 
-        // Both evaluate atomic at their respective index -> both true
+        emit(async, ltlController, mtlController, false, 100);
+        emit(async, ltlController, mtlController, true, 200);
+
         expect(ltlResults.last, isTrue);
         expect(mtlResults.last, isTrue);
 
@@ -100,273 +134,90 @@ void main() {
         mtlSub.cancel();
         ltlChecker.dispose();
         mtlChecker.dispose();
+        ltlController.close();
+        mtlController.close();
       });
     });
   });
 
-  group('Cases where checkers diverge', () {
-    test('F(p) found early - MTL sees it, LTL may not', () {
+  group('Current-state semantics are available explicitly', () {
+    test('Eventually can evaluate from the most recent state', () {
       fakeAsync((async) {
         final ltlController = StreamController<bool>();
         final mtlController = StreamController<TimedValue<bool>>();
-        // F(p) = Eventually p is true
-        final formula = Eventually(pTrue_f);
+        final formula = Eventually(pTrue);
 
         final ltlChecker = StreamLtlChecker<bool>(
           stream: ltlController.stream,
           formula: formula,
+          evaluationStart: StreamEvaluationStart.current,
         );
         final mtlChecker = StreamMtlChecker<bool>(
           mtlController.stream,
           formula: formula,
+          evaluationStart: StreamEvaluationStart.current,
         );
 
         final ltlResults = <bool>[];
         final mtlResults = <bool>[];
         final ltlSub = ltlChecker.resultStream.listen(ltlResults.add);
-        final mtlSub =
-            mtlChecker.resultStream.listen((r) => mtlResults.add(r.holds));
+        final mtlSub = mtlChecker.resultStream
+            .listen((result) => mtlResults.add(result.holds));
 
         async.flushMicrotasks();
 
-        // Trace: [T, F]
-        ltlController.add(true);
-        mtlController.add(TimedValue(
-            true, const Duration(milliseconds: 100)));
-        async.flushMicrotasks();
+        emit(async, ltlController, mtlController, true, 100);
+        emit(async, ltlController, mtlController, false, 200);
 
-        ltlController.add(false);
-        mtlController.add(TimedValue(
-            false, const Duration(milliseconds: 200)));
-        async.flushMicrotasks();
-
-        // LTL: evaluates F(p) at last index (idx 1, value=false)
-        //   -> from idx 1, F(p=true) checks only idx 1 (false) -> false
-        // MTL: evaluates F(p) at index 0 (value=true)
-        //   -> from idx 0, F(p=true) finds it at idx 0 -> true
-        expect(ltlResults.last, isFalse,
-            reason: 'LTL checker evaluates at last index, F(p) fails');
-        expect(mtlResults.last, isTrue,
-            reason: 'MTL checker evaluates at index 0, F(p) finds early hit');
+        expect(ltlResults.last, isFalse);
+        expect(mtlResults.last, isFalse);
 
         ltlSub.cancel();
         mtlSub.cancel();
         ltlChecker.dispose();
         mtlChecker.dispose();
+        ltlController.close();
+        mtlController.close();
       });
     });
 
-    test('G(p) on [F, T] - LTL sees only last, MTL sees all', () {
+    test('Always can also align on the most recent state', () {
       fakeAsync((async) {
         final ltlController = StreamController<bool>();
         final mtlController = StreamController<TimedValue<bool>>();
-        final formula = Always(pTrue_f);
+        final formula = Always(pFalse);
 
         final ltlChecker = StreamLtlChecker<bool>(
           stream: ltlController.stream,
           formula: formula,
+          evaluationStart: StreamEvaluationStart.current,
         );
         final mtlChecker = StreamMtlChecker<bool>(
           mtlController.stream,
           formula: formula,
+          evaluationStart: StreamEvaluationStart.current,
         );
 
         final ltlResults = <bool>[];
         final mtlResults = <bool>[];
         final ltlSub = ltlChecker.resultStream.listen(ltlResults.add);
-        final mtlSub =
-            mtlChecker.resultStream.listen((r) => mtlResults.add(r.holds));
+        final mtlSub = mtlChecker.resultStream
+            .listen((result) => mtlResults.add(result.holds));
 
         async.flushMicrotasks();
 
-        // Trace: [F, T]
-        ltlController.add(false);
-        mtlController.add(TimedValue(
-            false, const Duration(milliseconds: 100)));
-        async.flushMicrotasks();
+        emit(async, ltlController, mtlController, true, 100);
+        emit(async, ltlController, mtlController, false, 200);
 
-        ltlController.add(true);
-        mtlController.add(TimedValue(
-            true, const Duration(milliseconds: 200)));
-        async.flushMicrotasks();
-
-        // LTL: G(p) at last index (idx 1, value=true) -> only checks idx 1 -> true
-        // MTL: G(p) at index 0 (value=false) -> fails at idx 0 -> false
-        expect(ltlResults.last, isTrue,
-            reason: 'LTL checker evaluates at last index, G(p) on [T] suffix');
-        expect(mtlResults.last, isFalse,
-            reason: 'MTL checker evaluates from index 0, G(p) fails at first F');
+        expect(ltlResults.last, isTrue);
+        expect(mtlResults.last, isTrue);
 
         ltlSub.cancel();
         mtlSub.cancel();
         ltlChecker.dispose();
         mtlChecker.dispose();
-      });
-    });
-
-    test('X(p) on two-event trace', () {
-      fakeAsync((async) {
-        final ltlController = StreamController<bool>();
-        final mtlController = StreamController<TimedValue<bool>>();
-        // X(p) = Next(p is true)
-        final formula = Next(pTrue_f);
-
-        final ltlChecker = StreamLtlChecker<bool>(
-          stream: ltlController.stream,
-          formula: formula,
-        );
-        final mtlChecker = StreamMtlChecker<bool>(
-          mtlController.stream,
-          formula: formula,
-        );
-
-        final ltlResults = <bool>[];
-        final mtlResults = <bool>[];
-        final ltlSub = ltlChecker.resultStream.listen(ltlResults.add);
-        final mtlSub =
-            mtlChecker.resultStream.listen((r) => mtlResults.add(r.holds));
-
-        async.flushMicrotasks();
-
-        // Trace: [F, T]
-        ltlController.add(false);
-        mtlController.add(TimedValue(
-            false, const Duration(milliseconds: 100)));
-        async.flushMicrotasks();
-
-        ltlController.add(true);
-        mtlController.add(TimedValue(
-            true, const Duration(milliseconds: 200)));
-        async.flushMicrotasks();
-
-        // LTL: X(p) at last index (idx 1) -> needs idx 2 (out of bounds) -> false
-        // MTL: X(p) at index 0 -> checks idx 1 (value=true) -> true
-        expect(ltlResults.last, isFalse,
-            reason: 'LTL checker: X(p) at last index hits trace end');
-        expect(mtlResults.last, isTrue,
-            reason: 'MTL checker: X(p) at index 0 finds next event');
-
-        ltlSub.cancel();
-        mtlSub.cancel();
-        ltlChecker.dispose();
-        mtlChecker.dispose();
-      });
-    });
-  });
-
-  group('StreamMtlChecker with pure-LTL formulas', () {
-    test('Eventually with multiple events', () {
-      fakeAsync((async) {
-        final controller = StreamController<TimedValue<bool>>();
-        final formula = Eventually(pTrue_f);
-
-        final checker = StreamMtlChecker<bool>(
-          controller.stream,
-          formula: formula,
-        );
-
-        final results = <bool>[];
-        final sub = checker.resultStream.listen((r) => results.add(r.holds));
-        async.flushMicrotasks();
-
-        // Initial: empty trace -> false
-        expect(results, [false]);
-
-        // Add F
-        controller.add(TimedValue(
-            false, const Duration(milliseconds: 100)));
-        async.flushMicrotasks();
-        expect(results.last, isFalse);
-
-        // Add T -> F(p) from idx 0 finds T at idx 1
-        controller.add(TimedValue(
-            true, const Duration(milliseconds: 200)));
-        async.flushMicrotasks();
-        expect(results.last, isTrue);
-
-        // Add F -> F(p) from idx 0 still finds T at idx 1
-        controller.add(TimedValue(
-            false, const Duration(milliseconds: 300)));
-        async.flushMicrotasks();
-        expect(results.last, isTrue);
-
-        sub.cancel();
-        checker.dispose();
-      });
-    });
-
-    test('Always with accumulating trace', () {
-      fakeAsync((async) {
-        final controller = StreamController<TimedValue<bool>>();
-        final formula = Always(pTrue_f);
-
-        final checker = StreamMtlChecker<bool>(
-          controller.stream,
-          formula: formula,
-        );
-
-        final results = <bool>[];
-        final sub = checker.resultStream.listen((r) => results.add(r.holds));
-        async.flushMicrotasks();
-
-        // Initial: empty trace -> G(p) vacuously true
-        expect(results, [true]);
-
-        // Add T -> G(p) on [T] from idx 0 -> true
-        controller.add(TimedValue(
-            true, const Duration(milliseconds: 100)));
-        async.flushMicrotasks();
-        expect(results.last, isTrue);
-
-        // Add T -> G(p) on [T,T] from idx 0 -> true
-        controller.add(TimedValue(
-            true, const Duration(milliseconds: 200)));
-        async.flushMicrotasks();
-        expect(results.last, isTrue);
-
-        // Add F -> G(p) on [T,T,F] from idx 0 -> false (fails at idx 2)
-        controller.add(TimedValue(
-            false, const Duration(milliseconds: 300)));
-        async.flushMicrotasks();
-        expect(results.last, isFalse);
-
-        sub.cancel();
-        checker.dispose();
-      });
-    });
-
-    test('Until with pure-LTL semantics', () {
-      fakeAsync((async) {
-        final controller = StreamController<TimedValue<bool>>();
-        // not_p U p -> false until true
-        final formula = Until(pFalse_f, pTrue_f);
-
-        final checker = StreamMtlChecker<bool>(
-          controller.stream,
-          formula: formula,
-        );
-
-        final results = <bool>[];
-        final sub = checker.resultStream.listen((r) => results.add(r.holds));
-        async.flushMicrotasks();
-
-        // Initial: empty trace -> Until fails
-        expect(results, [false]);
-
-        // Add F -> not_p(T) U p(F): p never holds -> false
-        controller.add(TimedValue(
-            false, const Duration(milliseconds: 100)));
-        async.flushMicrotasks();
-        expect(results.last, isFalse);
-
-        // Add T -> not_p U p: p holds at idx 1, not_p holds at idx 0 -> true
-        controller.add(TimedValue(
-            true, const Duration(milliseconds: 200)));
-        async.flushMicrotasks();
-        expect(results.last, isTrue);
-
-        sub.cancel();
-        checker.dispose();
+        ltlController.close();
+        mtlController.close();
       });
     });
   });

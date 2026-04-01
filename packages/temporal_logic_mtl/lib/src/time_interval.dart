@@ -23,11 +23,24 @@ class TimeInterval {
 
   /// Creates a closed time interval `[lowerBound, upperBound]`.
   ///
-  /// Throws an assertion error if `lowerBound` is negative or if `upperBound`
+  /// Throws an [ArgumentError] if `lowerBound` is negative or if `upperBound`
   /// is less than `lowerBound`.
   TimeInterval(this.lowerBound, this.upperBound) {
-    assert(lowerBound >= Duration.zero, 'Lower bound must be non-negative.');
-    assert(upperBound >= lowerBound, 'Upper bound must be >= lower bound.');
+    if (lowerBound < Duration.zero) {
+      throw ArgumentError.value(
+        lowerBound,
+        'lowerBound',
+        'Lower bound must be non-negative.',
+      );
+    }
+
+    if (upperBound < lowerBound) {
+      throw ArgumentError.value(
+        upperBound,
+        'upperBound',
+        'Upper bound must be greater than or equal to lowerBound.',
+      );
+    }
   }
 
   /// Creates an interval representing exactly duration `d`: `[d, d]`.

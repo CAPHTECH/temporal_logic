@@ -32,15 +32,15 @@ void main() {
   group('EventuallyTimed edge cases', () {
     test('zero-width interval at t>0 where event exists', () {
       // F_[100ms,100ms] pB from index 0 -> event 'b' at exactly 100ms
-      final formula =
-          EventuallyTimed(pB, TimeInterval.exactly(const Duration(milliseconds: 100)));
+      final formula = EventuallyTimed(
+          pB, TimeInterval.exactly(const Duration(milliseconds: 100)));
       expect(evalM(trace, formula).holds, isTrue);
     });
 
     test('zero-width interval at t>0 where no event exists', () {
       // F_[200ms,200ms] pTrue from index 0 -> no event at exactly 200ms
-      final formula =
-          EventuallyTimed(pTrue, TimeInterval.exactly(const Duration(milliseconds: 200)));
+      final formula = EventuallyTimed(
+          pTrue, TimeInterval.exactly(const Duration(milliseconds: 200)));
       expect(evalM(trace, formula).holds, isFalse);
     });
 
@@ -63,16 +63,20 @@ void main() {
     test('startIndex > 0 shifts interval anchor', () {
       // From index 0: F_[0,100ms] pB -> true (b at 100ms)
       expect(
-          evalM(trace,
-                  EventuallyTimed(pB, TimeInterval.upTo(const Duration(milliseconds: 100))))
+          evalM(
+                  trace,
+                  EventuallyTimed(
+                      pB, TimeInterval.upTo(const Duration(milliseconds: 100))))
               .holds,
           isTrue);
 
       // From index 1 (t=100ms): F_[0,100ms] pC -> anchored at 100ms, so [100ms,200ms]
       // 'c' is at 300ms, outside. Should be false.
       expect(
-          evalM(trace,
-                  EventuallyTimed(pC, TimeInterval.upTo(const Duration(milliseconds: 100))),
+          evalM(
+                  trace,
+                  EventuallyTimed(
+                      pC, TimeInterval.upTo(const Duration(milliseconds: 100))),
                   startIndex: 1)
               .holds,
           isFalse);
@@ -80,8 +84,10 @@ void main() {
       // From index 1 (t=100ms): F_[0,200ms] pC -> anchored at 100ms, so [100ms,300ms]
       // 'c' is at 300ms, timeDiff = 200ms, inside [0,200ms]. Should be true.
       expect(
-          evalM(trace,
-                  EventuallyTimed(pC, TimeInterval.upTo(const Duration(milliseconds: 200))),
+          evalM(
+                  trace,
+                  EventuallyTimed(
+                      pC, TimeInterval.upTo(const Duration(milliseconds: 200))),
                   startIndex: 1)
               .holds,
           isTrue);
@@ -156,8 +162,10 @@ void main() {
       // From index 2 (t=300ms): G_[0,300ms] pNotE
       // Events at 300ms('c'), 600ms('d'). Both satisfy pNotE.
       expect(
-          evalM(trace,
-                  AlwaysTimed(pNotE, TimeInterval.upTo(const Duration(milliseconds: 300))),
+          evalM(
+                  trace,
+                  AlwaysTimed(pNotE,
+                      TimeInterval.upTo(const Duration(milliseconds: 300))),
                   startIndex: 2)
               .holds,
           isTrue);
@@ -165,8 +173,10 @@ void main() {
       // From index 2 (t=300ms): G_[0,700ms] pNotE
       // Events at 300ms('c'), 600ms('d'), 1000ms('e'). 'e' fails pNotE.
       expect(
-          evalM(trace,
-                  AlwaysTimed(pNotE, TimeInterval.upTo(const Duration(milliseconds: 700))),
+          evalM(
+                  trace,
+                  AlwaysTimed(pNotE,
+                      TimeInterval.upTo(const Duration(milliseconds: 700))),
                   startIndex: 2)
               .holds,
           isFalse);
@@ -186,17 +196,15 @@ void main() {
   group('UntilTimed edge cases', () {
     test('neither condition holds', () {
       // pFalse U_[0,1000ms] pFalse -> both false, fails
-      final formula =
-          UntilTimed(pFalse, pFalse, TimeInterval.upTo(const Duration(milliseconds: 1000)));
+      final formula = UntilTimed(pFalse, pFalse,
+          TimeInterval.upTo(const Duration(milliseconds: 1000)));
       expect(evalM(trace, formula).holds, isFalse);
     });
 
     test('right holds only at exact lower bound', () {
       // pNotE U_[100ms,100ms] pB from index 0 -> 'b' at 100ms exactly
       final formula = UntilTimed(
-          pNotE,
-          pB,
-          TimeInterval.exactly(const Duration(milliseconds: 100)));
+          pNotE, pB, TimeInterval.exactly(const Duration(milliseconds: 100)));
       // pNotE must hold for indices before 'b' (only index 0, 'a' -> true)
       expect(evalM(trace, formula).holds, isTrue);
     });
@@ -214,8 +222,8 @@ void main() {
 
     test('left fails immediately', () {
       // pFalse U_[0,1000ms] pE -> left fails at index 0
-      final formula =
-          UntilTimed(pFalse, pE, TimeInterval.upTo(const Duration(milliseconds: 1000)));
+      final formula = UntilTimed(
+          pFalse, pE, TimeInterval.upTo(const Duration(milliseconds: 1000)));
       expect(evalM(trace, formula).holds, isFalse);
     });
 
@@ -224,8 +232,10 @@ void main() {
       // timeDiff for 'd' from 300ms = 300ms, in [0,300ms].
       // pNotE must hold at index 2 ('c' -> true).
       expect(
-          evalM(trace,
-                  UntilTimed(pNotE, pD, TimeInterval.upTo(const Duration(milliseconds: 300))),
+          evalM(
+                  trace,
+                  UntilTimed(pNotE, pD,
+                      TimeInterval.upTo(const Duration(milliseconds: 300))),
                   startIndex: 2)
               .holds,
           isTrue);
@@ -233,8 +243,10 @@ void main() {
       // From index 2 (t=300ms): pNotE U_[0,200ms] pD
       // timeDiff for 'd' from 300ms = 300ms, outside [0,200ms]. Fails.
       expect(
-          evalM(trace,
-                  UntilTimed(pNotE, pD, TimeInterval.upTo(const Duration(milliseconds: 200))),
+          evalM(
+                  trace,
+                  UntilTimed(pNotE, pD,
+                      TimeInterval.upTo(const Duration(milliseconds: 200))),
                   startIndex: 2)
               .holds,
           isFalse);
@@ -278,8 +290,8 @@ void main() {
       expect(
           evalM(
                   trace,
-                  ReleaseTimed(
-                      pFalse, pTrue, TimeInterval.upTo(const Duration(milliseconds: 400))),
+                  ReleaseTimed(pFalse, pTrue,
+                      TimeInterval.upTo(const Duration(milliseconds: 400))),
                   startIndex: 3)
               .holds,
           isTrue);
@@ -318,8 +330,8 @@ void main() {
       expect(
           evalM(
                   trace,
-                  WeakUntilTimed(
-                      pTrue, pFalse, TimeInterval.upTo(const Duration(milliseconds: 400))),
+                  WeakUntilTimed(pTrue, pFalse,
+                      TimeInterval.upTo(const Duration(milliseconds: 400))),
                   startIndex: 3)
               .holds,
           isTrue);
@@ -347,18 +359,21 @@ void main() {
 
     final pY = state<String>((s) => s == 'y', name: 'pY');
     final pZ = state<String>((s) => s == 'z', name: 'pZ');
-    final pW = state<String>((s) => s == 'w', name: 'pW');
 
     test('F_[100ms,100ms] sees both events at same timestamp', () {
       // Both y and z are at 100ms
       expect(
-          evalM(dupTrace,
-                  EventuallyTimed(pY, TimeInterval.exactly(const Duration(milliseconds: 100))))
+          evalM(
+                  dupTrace,
+                  EventuallyTimed(pY,
+                      TimeInterval.exactly(const Duration(milliseconds: 100))))
               .holds,
           isTrue);
       expect(
-          evalM(dupTrace,
-                  EventuallyTimed(pZ, TimeInterval.exactly(const Duration(milliseconds: 100))))
+          evalM(
+                  dupTrace,
+                  EventuallyTimed(pZ,
+                      TimeInterval.exactly(const Duration(milliseconds: 100))))
               .holds,
           isTrue);
     });
@@ -366,8 +381,10 @@ void main() {
     test('G_[100ms,100ms] requires all events at that timestamp', () {
       // Both y and z at 100ms. pY is false for z. G should fail.
       expect(
-          evalM(dupTrace,
-                  AlwaysTimed(pY, TimeInterval.exactly(const Duration(milliseconds: 100))))
+          evalM(
+                  dupTrace,
+                  AlwaysTimed(pY,
+                      TimeInterval.exactly(const Duration(milliseconds: 100))))
               .holds,
           isFalse);
     });
@@ -376,8 +393,10 @@ void main() {
       final pNotW = state<String>((s) => s != 'w', name: 'pNotW');
       // pNotW U_[0,100ms] pZ -> 'z' at 100ms, pNotW holds at x(0ms),y(100ms)
       expect(
-          evalM(dupTrace,
-                  UntilTimed(pNotW, pZ, TimeInterval.upTo(const Duration(milliseconds: 100))))
+          evalM(
+                  dupTrace,
+                  UntilTimed(pNotW, pZ,
+                      TimeInterval.upTo(const Duration(milliseconds: 100))))
               .holds,
           isTrue);
     });
@@ -387,7 +406,6 @@ void main() {
     final singleTrace = Trace([
       TraceEvent(value: 'only', timestamp: Duration.zero),
     ]);
-    final pOnly = state<String>((s) => s == 'only', name: 'pOnly');
 
     test('AlwaysTimed vacuously true when interval has no events', () {
       final formula = AlwaysTimed(

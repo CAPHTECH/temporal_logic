@@ -2,21 +2,21 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:snackbar_mtl_example/main.dart';
-// Use consistent prefixes
-import 'package:temporal_logic_core/temporal_logic_core.dart' as tlCore;
-import 'package:temporal_logic_flutter/temporal_logic_flutter.dart' as tlFlutter;
-import 'package:temporal_logic_mtl/temporal_logic_mtl.dart' as tlMtl;
+import 'package:temporal_logic_flutter/temporal_logic_flutter_test.dart'
+    as tl_flutter;
 
 // Helper to get current SnackbarState from the widget tree and interaction state
 // We now pass the trigger count manually when recording.
-SnackbarState getCurrentSnackbarState(WidgetTester tester, int currentTriggerCount) {
+SnackbarState getCurrentSnackbarState(
+    WidgetTester tester, int currentTriggerCount) {
   final snackbarFinder = find.byType(SnackBar);
   // Use tester.any() for a more robust visibility check
   final bool isCurrentlyVisible = tester.any(snackbarFinder);
 
   if (!isCurrentlyVisible) {
     // If snackbar isn't visible, return the hidden state from the enum
-    return SnackbarState.hidden; // Assuming triggerCount is not needed when hidden
+    return SnackbarState
+        .hidden; // Assuming triggerCount is not needed when hidden
   }
   // If visible, extract content (assuming it must exist if visible)
   // Return the visible state. Content check might be removed if not needed.
@@ -30,7 +30,8 @@ void main() {
         (tester) => tester.runAsync(() async {
               // --- Setup ---
               // Use TimedValue<SnackbarState> (enum) for the recorder
-              final recorder = tlFlutter.TraceRecorder<tlCore.TimedValue<SnackbarState>>(
+              final recorder = tl_flutter.TraceRecorder<
+                  tl_flutter.TimedValue<SnackbarState>>(
                 // Adjust interval if needed
                 interval: const Duration(milliseconds: 50),
               );
@@ -43,9 +44,9 @@ void main() {
 
               // TODO: Need a way to access the app's snackbarStreamController stream here
               // Example placeholder:
-              // Stream<tlCore.TimedValue<SnackbarState>> appStream = getAppStream(container);
+              // Stream<tl_flutter.TimedValue<SnackbarState>> appStream = getAppStream(container);
               // StreamSubscription sub = appStream.listen((timedValue) {
-              //    print('Test recorder received: $timedValue');
+              //    debugPrint('Test recorder received: $timedValue');
               //    recorder.record(timedValue);
               // });
               // addTearDown(sub.cancel);
@@ -63,34 +64,43 @@ void main() {
               // Tap the button increments snackbarTriggerProvider in the app
               await tester.tap(find.byIcon(Icons.add_alert));
               // Allow time for snackbar to show and hide
-              await tester.pump(const Duration(seconds: 3)); // Wait for snackbar duration + buffer
+              await tester.pump(const Duration(
+                  seconds: 3)); // Wait for snackbar duration + buffer
               await tester.pumpAndSettle(); // Ensure animations finish
-              await Future.delayed(const Duration(milliseconds: 100)); // Final buffer
+              await Future.delayed(
+                  const Duration(milliseconds: 100)); // Final buffer
 
               // --- Temporal Logic Verification ---
 
               // TODO: Redefine formulas for TimedValue<SnackbarState> (enum)
-              // Use tlCore.event for state change detection
+              // Use tl_flutter.event for state change detection
               final showError =
-                  tlCore.event<tlCore.TimedValue<SnackbarState>>((tv) => /* Detect trigger */ false, name: 'showError');
+                  tl_flutter.event<tl_flutter.TimedValue<SnackbarState>>(
+                      (tv) => /* Detect trigger */ false,
+                      name: 'showError');
               // Correctly compare the enum value inside the TimedValue
-              // Use tlCore.state for instantaneous state check
-              final snackbarHidden = tlCore
-                  .state<tlCore.TimedValue<SnackbarState>>((tv) => tv.value == SnackbarState.hidden, name: 'hidden');
+              // Use tl_flutter.state for instantaneous state check
+              final snackbarHidden =
+                  tl_flutter.state<tl_flutter.TimedValue<SnackbarState>>(
+                      (tv) => tv.value == SnackbarState.hidden,
+                      name: 'hidden');
 
               // Placeholder MTL formula
-              final formula = tlCore.always(showError.implies(
-                  // Use tlMtl prefix for eventuallyTimed
+              final formula = tl_flutter.always(showError.implies(
+                  // Use tl_flutter prefix for eventuallyTimed
                   // Use the class constructor, not a builder function
-                  tlMtl.EventuallyTimed(
-                      snackbarHidden, tlMtl.TimeInterval(Duration.zero, const Duration(seconds: 3)))));
+                  tl_flutter.EventuallyTimed(
+                      snackbarHidden,
+                      tl_flutter.TimeInterval(
+                          Duration.zero, const Duration(seconds: 3)))));
 
-              final trace = recorder.trace; // Should be Trace<TimedValue<SnackbarState>>
-              print('Recorded Trace (TimedValue<SnackbarState>):\n$trace');
+              final trace =
+                  recorder.trace; // Should be Trace<TimedValue<SnackbarState>>
 
               // Verification
-              final mtlResult = tlMtl.evaluateMtlTrace(trace, formula);
-              expect(mtlResult.holds, isTrue, reason: 'MTL formula evaluation failed: $mtlResult');
+              final mtlResult = tl_flutter.evaluateMtlTrace(trace, formula);
+              expect(mtlResult.holds, isTrue,
+                  reason: 'MTL formula evaluation failed: $mtlResult');
             }));
   });
 }

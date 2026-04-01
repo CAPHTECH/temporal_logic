@@ -2,6 +2,8 @@ import 'dart:async';
 
 import 'package:temporal_logic_mtl/temporal_logic_mtl.dart';
 
+import 'stream_evaluation_start.dart';
+
 /// Provides periodic evaluation of a temporal logic [Formula]<S> (LTL/MTL)
 /// against a stream of time-stamped values. Incoming events are accumulated
 /// into an internal trace and evaluated on every new event.
@@ -14,6 +16,7 @@ class StreamMtlChecker<S> {
   final List<TraceEvent<S>> _internalTraceEvents =
       []; // Store TraceEvents directly
   final TimedValue<S>? _initialValue;
+  final StreamEvaluationStart _evaluationStart;
 
   StreamSubscription<TimedValue<S>>? _subscription;
   // Use EvaluationResult to potentially provide more info later
@@ -32,8 +35,10 @@ class StreamMtlChecker<S> {
     this._stream, {
     required Formula<S> formula,
     TimedValue<S>? initialValue,
+    StreamEvaluationStart evaluationStart = StreamEvaluationStart.beginning,
   })  : _formula = formula,
-        _initialValue = initialValue {
+        _initialValue = initialValue,
+        _evaluationStart = evaluationStart {
     if (_initialValue != null) {
       // Convert initial TimedValue to TraceEvent
       _internalTraceEvents.add(TraceEvent(
@@ -89,7 +94,11 @@ class StreamMtlChecker<S> {
     // Create Trace from the list of TraceEvents
     final currentTrace = Trace(_internalTraceEvents);
     // Use the unified evaluator from the mtl package
-    return evaluateMtlTrace(currentTrace, _formula);
+    return evaluateMtlTrace(
+      currentTrace,
+      _formula,
+      startIndex: _evaluationStart.resolveStartIndex(currentTrace.length),
+    );
   }
 
   /// Disposes the checker by cancelling the stream subscription, closing

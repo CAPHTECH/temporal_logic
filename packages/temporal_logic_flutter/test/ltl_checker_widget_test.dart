@@ -46,6 +46,7 @@ void main() {
       required Stream<TestState> stream,
       required Formula<TestState> formula,
       TestState? initialValue,
+      StreamEvaluationStart evaluationStart = StreamEvaluationStart.beginning,
       Widget Function(BuildContext context, bool result)? builder,
     }) {
       return MaterialApp(
@@ -54,6 +55,7 @@ void main() {
             stream: stream,
             formula: formula,
             initialValue: initialValue,
+            evaluationStart: evaluationStart,
             builder: builder,
           ),
         ),
@@ -169,6 +171,27 @@ void main() {
       // F(p) on [F, T] is true.
       // Now displays true
       expect(find.byIcon(Icons.check_circle), findsOneWidget);
+    });
+
+    testWidgets('Supports evaluating from the current state when requested',
+        (WidgetTester tester) async {
+      await tester.pumpWidget(buildTestableWidget(
+        stream: streamController.stream,
+        formula: formulaEventuallyTrue,
+        evaluationStart: StreamEvaluationStart.current,
+      ));
+
+      expect(find.byIcon(Icons.cancel), findsOneWidget);
+
+      streamController.add(TestState(true));
+      await tester.pump();
+      await tester.pump();
+      expect(find.byIcon(Icons.check_circle), findsOneWidget);
+
+      streamController.add(TestState(false));
+      await tester.pump();
+      await tester.pump();
+      expect(find.byIcon(Icons.cancel), findsOneWidget);
     });
 
     testWidgets('Uses custom builder when provided',

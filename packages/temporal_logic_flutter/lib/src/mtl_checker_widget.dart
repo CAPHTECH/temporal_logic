@@ -1,10 +1,8 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
-import 'package:temporal_logic_core/temporal_logic_core.dart';
 import 'package:temporal_logic_mtl/temporal_logic_mtl.dart';
 
 import 'stream_mtl_checker.dart'; // Import the redesigned checker
+import 'stream_evaluation_start.dart';
 
 /// A widget that observes a [stream] of timed states [TimedValue<S>] and displays
 /// whether a temporal logic [formula] (LTL or MTL) holds true based on the
@@ -49,6 +47,9 @@ class MtlCheckerWidget<S> extends StatefulWidget {
   /// within it). If `null`, evaluation starts with an empty trace.
   final TimedValue<S>? initialValue;
 
+  /// Controls where formula evaluation begins on the accumulated trace.
+  final StreamEvaluationStart evaluationStart;
+
   /// A builder function to customize the widget displayed based on the evaluation result.
   ///
   /// Provides the build context, the boolean evaluation result (`holds`), and the
@@ -69,6 +70,7 @@ class MtlCheckerWidget<S> extends StatefulWidget {
     required this.stream,
     required this.formula,
     this.initialValue,
+    this.evaluationStart = StreamEvaluationStart.beginning,
     this.builder,
   });
 
@@ -78,48 +80,39 @@ class MtlCheckerWidget<S> extends StatefulWidget {
 
 class _MtlCheckerWidgetState<S> extends State<MtlCheckerWidget<S>> {
   late StreamMtlChecker<S> _checker;
-  // Initialize with a placeholder state until the stream provides the first result.
-  EvaluationResult? _lastKnownResult =
-      const EvaluationResult(false, reason: 'Initializing...');
-  StreamSubscription<EvaluationResult>? _resultSubscription;
+  late EvaluationResult _initialResult;
 
   @override
   void initState() {
     super.initState();
+    _initialResult = _calculateInitialResult();
     _initializeChecker();
-    // The initial result will come from the stream shortly after initialization.
   }
 
-  // Initializes or re-initializes the underlying StreamMtlChecker and its subscription.
+  EvaluationResult _calculateInitialResult() {
+    final trace = widget.initialValue == null
+        ? Trace<S>.empty()
+        : Trace<S>([
+            TraceEvent(
+              timestamp: widget.initialValue!.timestamp,
+              value: widget.initialValue!.value,
+            ),
+          ]);
+
+    return evaluateMtlTrace(
+      trace,
+      widget.formula,
+      startIndex: widget.evaluationStart.resolveStartIndex(trace.length),
+    );
+  }
+
+  // Initializes or re-initializes the underlying StreamMtlChecker.
   void _initializeChecker() {
     _checker = StreamMtlChecker<S>(
       widget.stream,
       formula: widget.formula,
       initialValue: widget.initialValue,
-    );
-    // Cancel any existing subscription before creating a new one.
-    _resultSubscription?.cancel();
-    _resultSubscription = _checker.resultStream.listen(
-      (result) {
-        if (mounted) {
-          // Update the state only if the widget is still mounted.
-          setState(() {
-            _lastKnownResult = result;
-          });
-        }
-      },
-      onError: (e) {
-        // Handle potential errors from the stream.
-        if (mounted) {
-          setState(() {
-            // Update the result to reflect the error state.
-            _lastKnownResult =
-                EvaluationResult(false, reason: 'Stream Error: $e');
-          });
-        }
-      },
-      // Optionally handle stream completion if needed, e.g., update UI
-      // onDone: () { ... }
+      evaluationStart: widget.evaluationStart,
     );
   }
 
@@ -129,20 +122,16 @@ class _MtlCheckerWidgetState<S> extends State<MtlCheckerWidget<S>> {
     // Re-initialize the checker if the stream, formula, or initialValue changes.
     if (widget.stream != oldWidget.stream ||
         widget.formula != oldWidget.formula ||
-        widget.initialValue != oldWidget.initialValue) {
-      // Dispose the old checker resources before creating a new one.
+        widget.initialValue != oldWidget.initialValue ||
+        widget.evaluationStart != oldWidget.evaluationStart) {
       _checker.dispose();
-      // The subscription is implicitly cancelled by dispose, but explicit cancel is safe.
-      // _resultSubscription?.cancel();
+      _initialResult = _calculateInitialResult();
       _initializeChecker();
-      // No setState needed here; the new stream will provide updates.
     }
   }
 
   @override
   void dispose() {
-    // Ensure resources are cleaned up when the widget is removed.
-    _resultSubscription?.cancel();
     _checker.dispose();
     super.dispose();
   }
@@ -168,20 +157,15 @@ class _MtlCheckerWidgetState<S> extends State<MtlCheckerWidget<S>> {
   Widget build(BuildContext context) {
     // StreamBuilder listens to the checker's results and rebuilds the UI.
     return StreamBuilder<EvaluationResult>(
+      key: ObjectKey(_checker),
       stream: _checker.resultStream,
-      // Provide the last known result as initial data to avoid flicker.
-      initialData: _lastKnownResult,
+      initialData: _initialResult,
       builder: (context, snapshot) {
-        // Prioritize fresh data from the stream snapshot if available.
-        final evalResult = snapshot.hasData ? snapshot.data! : _lastKnownResult;
+        final evalResult = snapshot.data ?? _initialResult;
 
-        // Extract the boolean result, defaulting to false if no result yet.
-        final bool holds = evalResult?.holds ?? false;
-        // Ensure we always have a non-null EvaluationResult for the builder.
-        final EvaluationResult details = evalResult ??
-            const EvaluationResult(false, reason: 'Waiting for stream...');
+        final bool holds = evalResult.holds;
+        final EvaluationResult details = evalResult;
 
-        // Use the user-provided builder, or the default one.
         final builder = widget.builder ?? _defaultBuilder;
         return builder(context, holds, details);
       },

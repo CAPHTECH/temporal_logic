@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:temporal_logic_core/temporal_logic_core.dart';
 
 import 'stream_ltl_checker.dart'; // Assuming this exists and is updated
+import 'stream_evaluation_start.dart';
 
 /// A widget that observes a [stream] of state [S] and displays
 /// whether a Linear Temporal Logic (LTL) [formula] holds true based on the
@@ -44,6 +45,9 @@ class LtlCheckerWidget<S> extends StatefulWidget {
   /// the evaluation starts with an empty trace.
   final S? initialValue;
 
+  /// Controls where formula evaluation begins on the accumulated trace.
+  final StreamEvaluationStart evaluationStart;
+
   /// A builder function to customize the widget displayed based on the result.
   ///
   /// The builder receives the current [BuildContext] and the latest boolean
@@ -61,6 +65,7 @@ class LtlCheckerWidget<S> extends StatefulWidget {
     required this.stream,
     required this.formula,
     this.initialValue, // Added initialValue
+    this.evaluationStart = StreamEvaluationStart.beginning,
     this.builder,
   });
 
@@ -96,6 +101,7 @@ class _LtlCheckerWidgetState<S> extends State<LtlCheckerWidget<S>> {
       stream: widget.stream,
       formula: widget.formula,
       initialValue: widget.initialValue,
+      evaluationStart: widget.evaluationStart,
     );
   }
 
@@ -104,7 +110,8 @@ class _LtlCheckerWidgetState<S> extends State<LtlCheckerWidget<S>> {
     super.didUpdateWidget(oldWidget);
     if (widget.stream != oldWidget.stream ||
         widget.formula != oldWidget.formula ||
-        widget.initialValue != oldWidget.initialValue) {
+        widget.initialValue != oldWidget.initialValue ||
+        widget.evaluationStart != oldWidget.evaluationStart) {
       _checker.dispose();
       // Recalculate initial result for the new checker setup,
       // used if the stream rebuilds before emitting.
@@ -130,6 +137,7 @@ class _LtlCheckerWidgetState<S> extends State<LtlCheckerWidget<S>> {
   @override
   Widget build(BuildContext context) {
     return StreamBuilder<bool>(
+      key: ObjectKey(_checker),
       initialData: _initialResult,
       stream: _checker.resultStream,
       builder: (context, snapshot) {

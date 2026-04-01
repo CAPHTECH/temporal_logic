@@ -57,7 +57,8 @@ void main() {
       });
     });
 
-    test('emits initial evaluation based on initialValue', () {
+    test('emits initial evaluation from the beginning of the trace by default',
+        () {
       fakeAsync((async) {
         formula = pIs(true); // Check if p is true
         checker = StreamLtlChecker<TestState>(
@@ -78,9 +79,37 @@ void main() {
         controller.add(TestState(false));
         async.flushMicrotasks();
 
-        // Formula pIs(true) on trace [T, F] is false
+        // The default evaluation start is the beginning of the trace, so
+        // the atomic proposition still evaluates against the initial state.
+        expect(results, [true, true],
+            reason:
+                "After adding F, evaluation still starts from the initial true state");
+
+        sub.cancel();
+      });
+    });
+
+    test('can evaluate from the current state when requested', () {
+      fakeAsync((async) {
+        formula = pIs(true);
+        checker = StreamLtlChecker<TestState>(
+          stream: controller.stream,
+          formula: formula,
+          initialValue: TestState(true),
+          evaluationStart: StreamEvaluationStart.current,
+        );
+        final results = <bool>[];
+        final sub = checker.resultStream.listen(results.add);
+
+        async.flushMicrotasks();
+        expect(results, [true]);
+
+        controller.add(TestState(false));
+        async.flushMicrotasks();
+
         expect(results, [true, false],
-            reason: "After adding F, pIs(true) becomes false");
+            reason:
+                'When evaluation starts from the current state, the latest false state wins');
 
         sub.cancel();
       });

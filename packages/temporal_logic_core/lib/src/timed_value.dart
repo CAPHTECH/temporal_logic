@@ -122,7 +122,7 @@ class TraceEvent<T> {
 ///   that are monotonically non-decreasing
 ///   (i.e., `events[i+1].timestamp >= events[i].timestamp` for all valid `i`).
 ///   This property is crucial for the semantics of most temporal logics and is
-///   enforced by an assertion in the default constructor (in debug mode).
+///   enforced by validation in the default constructor.
 ///
 /// Traces are used by evaluator functions (like those potentially found in
 /// `evaluator.dart` or specific logic packages like `temporal_logic_mtl`) to
@@ -141,36 +141,29 @@ class Trace<T> {
   ///
   /// The provided [events] list is copied into an internal, unmodifiable list.
   ///
-  /// **Important:** This constructor asserts (in debug mode) that the timestamps
-  /// in the provided [events] list are monotonically non-decreasing. Providing
-  /// out-of-order events may lead to unexpected behavior or errors during
-  /// evaluation if assertions are disabled.
+  /// **Important:** This constructor throws an [ArgumentError] when the
+  /// timestamps in the provided [events] list are not monotonically
+  /// non-decreasing.
   ///
   /// - Parameter [events]: The list of trace events, expected to be sorted by
   ///   non-decreasing timestamp.
   Trace(List<TraceEvent<T>> events) : events = List.unmodifiable(events) {
-    // Assert for monotonic timestamps in development/debug mode.
-    // This helps catch logical errors early during trace construction.
-    assert(() {
-      if (this.events.length > 1) {
-        for (int i = 1; i < this.events.length; i++) {
-          final prev = this.events[i - 1];
-          final curr = this.events[i];
-          if (curr.timestamp < prev.timestamp) {
-            // Provide a more informative error message.
-            throw ArgumentError.value(
-              events,
-              'events',
-              'Timestamps must be monotonically non-decreasing. ' +
-                  'Violation at index $i: ' +
-                  'Previous=${prev.timestamp} (${prev.value}), ' +
-                  'Current=${curr.timestamp} (${curr.value})',
-            );
-          }
+    if (this.events.length > 1) {
+      for (int i = 1; i < this.events.length; i++) {
+        final prev = this.events[i - 1];
+        final curr = this.events[i];
+        if (curr.timestamp < prev.timestamp) {
+          throw ArgumentError.value(
+            events,
+            'events',
+            'Timestamps must be monotonically non-decreasing. '
+                'Violation at index $i: '
+                'Previous=${prev.timestamp} (${prev.value}), '
+                'Current=${curr.timestamp} (${curr.value})',
+          );
         }
       }
-      return true;
-    }());
+    }
   }
 
   /// Creates an empty trace with no events.

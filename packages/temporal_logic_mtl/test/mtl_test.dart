@@ -25,7 +25,8 @@ void main() {
 
   group('Trace (from core)', () {
     final v0 = TraceEvent(value: 0, timestamp: Duration.zero);
-    final v1 = TraceEvent(value: 1, timestamp: const Duration(milliseconds: 500));
+    final v1 =
+        TraceEvent(value: 1, timestamp: const Duration(milliseconds: 500));
     final v2 = TraceEvent(value: 2, timestamp: const Duration(seconds: 1));
     final v3 = TraceEvent(value: 2, timestamp: const Duration(seconds: 2));
     final trace = Trace([v0, v1, v2, v3]); // Use Trace constructor
@@ -45,14 +46,16 @@ void main() {
     });
 
     test('Trace constructor allows monotonic timestamps', () {
-      expect(() => Trace([v1, v0]), throwsA(isA<ArgumentError>())); // Check for ArgumentError from core
+      expect(() => Trace([v1, v0]),
+          throwsA(isA<ArgumentError>())); // Check for ArgumentError from core
       expect(() => Trace([v0, v1]), returnsNormally);
     });
   });
 
   group('TimeInterval', () {
     test('Constructors and contains', () {
-      final i1 = TimeInterval(const Duration(seconds: 1), const Duration(seconds: 3));
+      final i1 =
+          TimeInterval(const Duration(seconds: 1), const Duration(seconds: 3));
       expect(i1.contains(const Duration(seconds: 1)), isTrue);
       expect(i1.contains(const Duration(seconds: 2)), isTrue);
       expect(i1.contains(const Duration(seconds: 3)), isTrue);
@@ -67,6 +70,33 @@ void main() {
       expect(iExactly.lowerBound, const Duration(seconds: 1));
       expect(iExactly.upperBound, const Duration(seconds: 1));
     });
+
+    test('throws ArgumentError for invalid bounds', () {
+      expect(
+        () => TimeInterval(const Duration(milliseconds: -1), Duration.zero),
+        throwsA(
+          isA<ArgumentError>().having(
+            (error) => error.message,
+            'message',
+            contains('Lower bound must be non-negative'),
+          ),
+        ),
+      );
+
+      expect(
+        () => TimeInterval(
+          const Duration(milliseconds: 200),
+          const Duration(milliseconds: 100),
+        ),
+        throwsA(
+          isA<ArgumentError>().having(
+            (error) => error.message,
+            'message',
+            contains('Upper bound must be greater than or equal to lowerBound'),
+          ),
+        ),
+      );
+    });
   });
 
   // Helper to evaluate formulas using the new evaluator
@@ -77,7 +107,8 @@ void main() {
   group('MTL Formula Basic Checks (using evaluateMtlTrace)', () {
     // Trace: (0 @ 0ms) -> (1 @ 500ms) -> (2 @ 1000ms) -> (2 @ 2000ms)
     final v0 = TraceEvent(value: 0, timestamp: Duration.zero);
-    final v1 = TraceEvent(value: 1, timestamp: const Duration(milliseconds: 500));
+    final v1 =
+        TraceEvent(value: 1, timestamp: const Duration(milliseconds: 500));
     final v2 = TraceEvent(value: 2, timestamp: const Duration(seconds: 1));
     final v3 = TraceEvent(value: 2, timestamp: const Duration(seconds: 2));
     final trace = Trace([v0, v1, v2, v3]);
@@ -99,10 +130,13 @@ void main() {
       expect(evalM(trace, p0.and(pNonNegative)).holds, isTrue);
       expect(evalM(trace, p0.and(p1)).holds, isFalse);
       expect(evalM(trace, p1.or(p0)).holds, isTrue);
-      expect(evalM(trace, p1.or(p2)).holds, isFalse); // p1(false) or p2(false) at index 0
+      expect(evalM(trace, p1.or(p2)).holds,
+          isFalse); // p1(false) or p2(false) at index 0
       expect(evalM(trace, p0.implies(pNonNegative)).holds, isTrue);
-      expect(evalM(trace, p1.implies(p0)).holds, isTrue); // !p1(true) implies p0(true) at index 0
-      expect(evalM(trace, p0.implies(p1)).holds, isFalse); // p0(true) implies p1(false) at index 0
+      expect(evalM(trace, p1.implies(p0)).holds,
+          isTrue); // !p1(true) implies p0(true) at index 0
+      expect(evalM(trace, p0.implies(p1)).holds,
+          isFalse); // p0(true) implies p1(false) at index 0
       expect(evalM(trace, p0.not()).holds, isFalse);
       expect(evalM(trace, p1.not()).holds, isTrue);
     });
@@ -110,8 +144,10 @@ void main() {
     test('LTL Temporal Operators (Next, Eventually, Always)', () {
       final p1_at_1 = state<int>((s) => s == 1);
       // final p2_at_2 = state<int>((s) => s == 2);
-      expect(evalM(trace, Next(p1_at_1)).holds, isTrue); // X(s==1) at index 0 -> check index 1
-      expect(evalM(trace, Next(p0)).holds, isFalse); // X(s==0) at index 0 -> check index 1
+      expect(evalM(trace, Next(p1_at_1)).holds,
+          isTrue); // X(s==1) at index 0 -> check index 1
+      expect(evalM(trace, Next(p0)).holds,
+          isFalse); // X(s==0) at index 0 -> check index 1
       expect(evalM(trace, Eventually(p1)).holds, isTrue); // F(s==1)
       expect(evalM(trace, Always(pNonNegative)).holds, isTrue); // G(s>=0)
       expect(evalM(trace, Always(p2)).holds, isFalse); // G(s==2)
@@ -121,10 +157,14 @@ void main() {
   group('MTL Timed Operators (using evaluateMtlTrace)', () {
     // Trace: (a @ 0ms) -> (b @ 100ms) -> (c @ 300ms) -> (d @ 600ms) -> (e @ 1000ms)
     final va = TraceEvent(value: 'a', timestamp: Duration.zero);
-    final vb = TraceEvent(value: 'b', timestamp: const Duration(milliseconds: 100));
-    final vc = TraceEvent(value: 'c', timestamp: const Duration(milliseconds: 300));
-    final vd = TraceEvent(value: 'd', timestamp: const Duration(milliseconds: 600));
-    final ve = TraceEvent(value: 'e', timestamp: const Duration(milliseconds: 1000));
+    final vb =
+        TraceEvent(value: 'b', timestamp: const Duration(milliseconds: 100));
+    final vc =
+        TraceEvent(value: 'c', timestamp: const Duration(milliseconds: 300));
+    final vd =
+        TraceEvent(value: 'd', timestamp: const Duration(milliseconds: 600));
+    final ve =
+        TraceEvent(value: 'e', timestamp: const Duration(milliseconds: 1000));
     final trace = Trace([va, vb, vc, vd, ve]);
 
     final pA = state<String>((s) => s == 'a');
@@ -135,19 +175,41 @@ void main() {
 
     test('EventuallyTimed (F_I)', () {
       // F_[0, 150ms] pB
-      expect(evalM(trace, EventuallyTimed(pB, TimeInterval(Duration.zero, const Duration(milliseconds: 150)))).holds,
+      expect(
+          evalM(
+                  trace,
+                  EventuallyTimed(
+                      pB,
+                      TimeInterval(
+                          Duration.zero, const Duration(milliseconds: 150))))
+              .holds,
           isTrue);
       // F_[100ms, 100ms] pB
-      expect(evalM(trace, EventuallyTimed(pB, TimeInterval.exactly(const Duration(milliseconds: 100)))).holds, isTrue);
+      expect(
+          evalM(
+                  trace,
+                  EventuallyTimed(pB,
+                      TimeInterval.exactly(const Duration(milliseconds: 100))))
+              .holds,
+          isTrue);
       // F_[0, 50ms] pB
-      expect(evalM(trace, EventuallyTimed(pB, TimeInterval(Duration.zero, const Duration(milliseconds: 50)))).holds,
+      expect(
+          evalM(
+                  trace,
+                  EventuallyTimed(
+                      pB,
+                      TimeInterval(
+                          Duration.zero, const Duration(milliseconds: 50))))
+              .holds,
           isFalse);
       // F_[150ms, 400ms] pC
       expect(
           evalM(
                   trace,
                   EventuallyTimed(
-                      pC, TimeInterval(const Duration(milliseconds: 150), const Duration(milliseconds: 400))))
+                      pC,
+                      TimeInterval(const Duration(milliseconds: 150),
+                          const Duration(milliseconds: 400))))
               .holds,
           isTrue);
       // F_[150ms, 250ms] pC
@@ -155,29 +217,59 @@ void main() {
           evalM(
                   trace,
                   EventuallyTimed(
-                      pC, TimeInterval(const Duration(milliseconds: 150), const Duration(milliseconds: 250))))
+                      pC,
+                      TimeInterval(const Duration(milliseconds: 150),
+                          const Duration(milliseconds: 250))))
               .holds,
           isFalse);
       // F_[0, 1000ms] pE
-      expect(evalM(trace, EventuallyTimed(pE, TimeInterval.upTo(const Duration(milliseconds: 1000)))).holds, isTrue);
+      expect(
+          evalM(
+                  trace,
+                  EventuallyTimed(pE,
+                      TimeInterval.upTo(const Duration(milliseconds: 1000))))
+              .holds,
+          isTrue);
       // F_[0, 999ms] pE
-      expect(evalM(trace, EventuallyTimed(pE, TimeInterval.upTo(const Duration(milliseconds: 999)))).holds, isFalse);
+      expect(
+          evalM(
+                  trace,
+                  EventuallyTimed(
+                      pE, TimeInterval.upTo(const Duration(milliseconds: 999))))
+              .holds,
+          isFalse);
     });
 
     test('AlwaysTimed (G_I)', () {
       final pNotE = state<String>((s) => s != 'e', name: 'pNotE');
       // G_[0, 600ms] pNotE
-      expect(evalM(trace, AlwaysTimed(pNotE, TimeInterval(Duration.zero, const Duration(milliseconds: 600)))).holds,
+      expect(
+          evalM(
+                  trace,
+                  AlwaysTimed(
+                      pNotE,
+                      TimeInterval(
+                          Duration.zero, const Duration(milliseconds: 600))))
+              .holds,
           isTrue);
       // G_[0, 1000ms] pNotE
-      expect(evalM(trace, AlwaysTimed(pNotE, TimeInterval(Duration.zero, const Duration(milliseconds: 1000)))).holds,
+      expect(
+          evalM(
+                  trace,
+                  AlwaysTimed(
+                      pNotE,
+                      TimeInterval(
+                          Duration.zero, const Duration(milliseconds: 1000))))
+              .holds,
           isFalse); // Fails at time 1000ms
       // G_[100ms, 600ms] pNotE
       expect(
           evalM(
                   trace,
                   AlwaysTimed(
-                      pNotE, TimeInterval(const Duration(milliseconds: 100), const Duration(milliseconds: 600))))
+                      pNotE,
+                      TimeInterval(const Duration(milliseconds: 100),
+                          const Duration(milliseconds: 600))))
               .holds,
           isTrue);
       // G_[100ms, 300ms] (s == b || s == c)
@@ -186,7 +278,9 @@ void main() {
           evalM(
                   trace,
                   AlwaysTimed(
-                      pBorC, TimeInterval(const Duration(milliseconds: 100), const Duration(milliseconds: 300))))
+                      pBorC,
+                      TimeInterval(const Duration(milliseconds: 100),
+                          const Duration(milliseconds: 300))))
               .holds,
           isTrue);
       // G_[100ms, 301ms] (s == b || s == c) // Interval includes 300ms
@@ -194,30 +288,65 @@ void main() {
           evalM(
                   trace,
                   AlwaysTimed(
-                      pBorC, TimeInterval(const Duration(milliseconds: 100), const Duration(milliseconds: 301))))
+                      pBorC,
+                      TimeInterval(const Duration(milliseconds: 100),
+                          const Duration(milliseconds: 301))))
               .holds,
           isTrue);
       // G_[0, 99ms] pA
-      expect(evalM(trace, AlwaysTimed(pA, TimeInterval.upTo(const Duration(milliseconds: 99)))).holds, isTrue);
+      expect(
+          evalM(
+                  trace,
+                  AlwaysTimed(
+                      pA, TimeInterval.upTo(const Duration(milliseconds: 99))))
+              .holds,
+          isTrue);
     });
 
     test('UntilTimed (U_I)', () {
       final pNotD = state<String>((s) => s != 'd', name: 'pNotD');
       // pNotD U_[0, 600ms] pD
-      expect(evalM(trace, UntilTimed(pNotD, pD, TimeInterval.upTo(const Duration(milliseconds: 600)))).holds, isTrue);
+      expect(
+          evalM(
+                  trace,
+                  UntilTimed(pNotD, pD,
+                      TimeInterval.upTo(const Duration(milliseconds: 600))))
+              .holds,
+          isTrue);
       // pNotD U_[0, 599ms] pD
-      expect(evalM(trace, UntilTimed(pNotD, pD, TimeInterval.upTo(const Duration(milliseconds: 599)))).holds, isFalse);
+      expect(
+          evalM(
+                  trace,
+                  UntilTimed(pNotD, pD,
+                      TimeInterval.upTo(const Duration(milliseconds: 599))))
+              .holds,
+          isFalse);
       // pA U_[0, 100ms] pB
-      expect(evalM(trace, UntilTimed(pA, pB, TimeInterval.upTo(const Duration(milliseconds: 100)))).holds, isTrue);
+      expect(
+          evalM(
+                  trace,
+                  UntilTimed(pA, pB,
+                      TimeInterval.upTo(const Duration(milliseconds: 100))))
+              .holds,
+          isTrue);
       // pA U_[0, 99ms] pB
-      expect(evalM(trace, UntilTimed(pA, pB, TimeInterval.upTo(const Duration(milliseconds: 99)))).holds, isFalse);
+      expect(
+          evalM(
+                  trace,
+                  UntilTimed(pA, pB,
+                      TimeInterval.upTo(const Duration(milliseconds: 99))))
+              .holds,
+          isFalse);
       // Test where left fails before right
       // pB U_[100ms, 300ms] pC - This should fail because pB is false at index 0 (time 0ms)
       expect(
           evalM(
                   trace,
                   UntilTimed(
-                      pB, pC, TimeInterval(const Duration(milliseconds: 100), const Duration(milliseconds: 300))))
+                      pB,
+                      pC,
+                      TimeInterval(const Duration(milliseconds: 100),
+                          const Duration(milliseconds: 300))))
               .holds,
           isFalse);
     });
@@ -225,24 +354,40 @@ void main() {
 
   group('MTL Timed Release (R_I) (using evaluateMtlTrace)', () {
     // Trace: (a @ 0ms) -> (b @ 100ms) -> (c @ 300ms) -> (d @ 600ms) -> (e @ 1000ms)
-    final va = TraceEvent(value: ('a', true), timestamp: Duration.zero); // p=true
-    final vb = TraceEvent(value: ('b', true), timestamp: const Duration(milliseconds: 100)); // p=true
-    final vc = TraceEvent(value: ('c', false), timestamp: const Duration(milliseconds: 300)); // p=false
-    final vd = TraceEvent(value: ('d', true), timestamp: const Duration(milliseconds: 600)); // p=true
-    final ve = TraceEvent(value: ('e', true), timestamp: const Duration(milliseconds: 1000)); // p=true
+    final va =
+        TraceEvent(value: ('a', true), timestamp: Duration.zero); // p=true
+    final vb = TraceEvent(
+        value: ('b', true),
+        timestamp: const Duration(milliseconds: 100)); // p=true
+    final vc = TraceEvent(
+        value: ('c', false),
+        timestamp: const Duration(milliseconds: 300)); // p=false
+    final vd = TraceEvent(
+        value: ('d', true),
+        timestamp: const Duration(milliseconds: 600)); // p=true
+    final ve = TraceEvent(
+        value: ('e', true),
+        timestamp: const Duration(milliseconds: 1000)); // p=true
     final trace = Trace([va, vb, vc, vd, ve]);
 
     // p is true if second element of tuple is true
     final p = state<(String, bool)>((s) => s.$2, name: 'p');
     // q is true if first char is 'c' or 'd' or 'e'
-    final q = state<(String, bool)>((s) => ['c', 'd', 'e'].contains(s.$1), name: 'q');
+    final q =
+        state<(String, bool)>((s) => ['c', 'd', 'e'].contains(s.$1), name: 'q');
 
     // Definition: q R_I p === G_I p OR (p U_I (p and q)) --- Simplified: p must hold throughout I *unless* q holds at some point t in I, after which p must hold from t until the end of I relative to t.
     // Alternate simpler intuition: For all t' in I relative to t0, if p fails at t', then q must have held at some t'' between t0 and t' (inclusive of t0, exclusive of t'). And p must hold at the end bound of I.
 
     test('holds when G_I p holds and q does not within I', () {
       // G_[0, 100] p holds. q does not hold in [0, 100]. trace[0..1] values are ('a', T), ('b', T)
-      expect(evalM(trace, ReleaseTimed(q, p, TimeInterval.upTo(const Duration(milliseconds: 100)))).holds, isTrue);
+      expect(
+          evalM(
+                  trace,
+                  ReleaseTimed(q, p,
+                      TimeInterval.upTo(const Duration(milliseconds: 100))))
+              .holds,
+          isTrue);
     });
 
     test('fails when p fails and q holds at the same time within I', () {
@@ -251,7 +396,13 @@ void main() {
       // !q: T@a, T@b, F@c
       // !p: F@a, F@b, T@c
       // !q U_[0, 300] !p holds (at t=300ms). So Release should be false.
-      expect(evalM(trace, ReleaseTimed(q, p, TimeInterval.upTo(const Duration(milliseconds: 300)))).holds, isFalse);
+      expect(
+          evalM(
+                  trace,
+                  ReleaseTimed(q, p,
+                      TimeInterval.upTo(const Duration(milliseconds: 300))))
+              .holds,
+          isFalse);
     });
 
     test('fails when p fails and q holds relative to interval start', () {
@@ -267,7 +418,10 @@ void main() {
           evalM(
                   trace,
                   ReleaseTimed(
-                      q, p, TimeInterval(const Duration(milliseconds: 100), const Duration(milliseconds: 600))))
+                      q,
+                      p,
+                      TimeInterval(const Duration(milliseconds: 100),
+                          const Duration(milliseconds: 600))))
               .holds,
           isFalse);
     });
@@ -278,7 +432,10 @@ void main() {
           evalM(
                   trace,
                   ReleaseTimed(
-                      q, p, TimeInterval(const Duration(milliseconds: 600), const Duration(milliseconds: 1000))))
+                      q,
+                      p,
+                      TimeInterval(const Duration(milliseconds: 600),
+                          const Duration(milliseconds: 1000))))
               .holds,
           isTrue);
     });
@@ -289,21 +446,37 @@ void main() {
       // !q: T@a, T@b, F@c, F@d, F@e
       // !p: F@a, F@b, T@c, F@d, F@e
       // Need !q U_[0, 1000] !p. !p holds at 300ms. !q holds at 0, 100. Fails at 300. Until holds. Release fails.
-      expect(evalM(trace, ReleaseTimed(q, p, TimeInterval.upTo(const Duration(milliseconds: 1000)))).holds, isFalse);
+      expect(
+          evalM(
+                  trace,
+                  ReleaseTimed(q, p,
+                      TimeInterval.upTo(const Duration(milliseconds: 1000))))
+              .holds,
+          isFalse);
     });
   });
 
   group('MTL Timed Weak Until (W_I) (using evaluateMtlTrace)', () {
     // Trace: (a @ 0ms) -> (b @ 100ms) -> (c @ 300ms) -> (d @ 600ms) -> (e @ 1000ms)
-    final va = TraceEvent(value: ('a', true), timestamp: Duration.zero); // p=true
-    final vb = TraceEvent(value: ('b', false), timestamp: const Duration(milliseconds: 100)); // p=false
-    final vc = TraceEvent(value: ('c', true), timestamp: const Duration(milliseconds: 300)); // p=true
-    final vd = TraceEvent(value: ('d', true), timestamp: const Duration(milliseconds: 600)); // p=true
-    final ve = TraceEvent(value: ('e', false), timestamp: const Duration(milliseconds: 1000)); // p=false
+    final va =
+        TraceEvent(value: ('a', true), timestamp: Duration.zero); // p=true
+    final vb = TraceEvent(
+        value: ('b', false),
+        timestamp: const Duration(milliseconds: 100)); // p=false
+    final vc = TraceEvent(
+        value: ('c', true),
+        timestamp: const Duration(milliseconds: 300)); // p=true
+    final vd = TraceEvent(
+        value: ('d', true),
+        timestamp: const Duration(milliseconds: 600)); // p=true
+    final ve = TraceEvent(
+        value: ('e', false),
+        timestamp: const Duration(milliseconds: 1000)); // p=false
     final trace = Trace([va, vb, vc, vd, ve]);
 
     final p = state<(String, bool)>((s) => s.$2, name: 'p');
-    final q = state<(String, bool)>((s) => ['d', 'e'].contains(s.$1), name: 'q'); // q holds at d, e
+    final q = state<(String, bool)>((s) => ['d', 'e'].contains(s.$1),
+        name: 'q'); // q holds at d, e
 
     // Definition: p W_I q === G_I p OR (p U_I q)
 
@@ -311,7 +484,13 @@ void main() {
       // p W_[0, 600] q.
       // G_[0, 600] p fails at 100ms.
       // p U_[0, 600] q. q holds at 600ms ('d'). p must hold up to 600ms. Fails at 100ms.
-      expect(evalM(trace, WeakUntilTimed(p, q, TimeInterval.upTo(const Duration(milliseconds: 600)))).holds, isFalse);
+      expect(
+          evalM(
+                  trace,
+                  WeakUntilTimed(p, q,
+                      TimeInterval.upTo(const Duration(milliseconds: 600))))
+              .holds,
+          isFalse);
     });
 
     test('holds when G_I p holds', () {
@@ -321,7 +500,10 @@ void main() {
           evalM(
                   trace,
                   WeakUntilTimed(
-                      p, q, TimeInterval(const Duration(milliseconds: 300), const Duration(milliseconds: 600))))
+                      p,
+                      q,
+                      TimeInterval(const Duration(milliseconds: 300),
+                          const Duration(milliseconds: 600))))
               .holds,
           isTrue);
     });
@@ -330,7 +512,13 @@ void main() {
       // p W_[0, 1000] q.
       // G_[0, 1000] p fails (at 100ms and 1000ms).
       // p U_[0, 1000] q. q holds at 600ms ('d'). p must hold up to 600ms. Fails at 100ms.
-      expect(evalM(trace, WeakUntilTimed(p, q, TimeInterval.upTo(const Duration(milliseconds: 1000)))).holds, isFalse);
+      expect(
+          evalM(
+                  trace,
+                  WeakUntilTimed(p, q,
+                      TimeInterval.upTo(const Duration(milliseconds: 1000))))
+              .holds,
+          isFalse);
     });
 
     test('holds when p U_I q holds (q holds within interval)', () {
@@ -343,7 +531,10 @@ void main() {
           evalM(
                   trace,
                   WeakUntilTimed(
-                      p, q, TimeInterval(const Duration(milliseconds: 600), const Duration(milliseconds: 1000))))
+                      p,
+                      q,
+                      TimeInterval(const Duration(milliseconds: 600),
+                          const Duration(milliseconds: 1000))))
               .holds,
           isFalse);
     });
@@ -351,18 +542,34 @@ void main() {
     test('holds on empty trace', () {
       // G_I p holds vacuously on empty trace.
       final emptyTrace = Trace<(String, bool)>([]);
-      expect(evalM(emptyTrace, WeakUntilTimed(p, q, TimeInterval.upTo(const Duration(seconds: 1)))).holds, isTrue);
+      expect(
+          evalM(
+                  emptyTrace,
+                  WeakUntilTimed(
+                      p, q, TimeInterval.upTo(const Duration(seconds: 1))))
+              .holds,
+          isTrue);
     });
   });
 
   group('MTL Nested/Complex Formulas (using evaluateMtlTrace)', () {
     // Trace 1 for G(p->Fq) and F(p && Gq)
-    final trace1_v0 = TraceEvent(value: {'p': true, 'q': false}, timestamp: Duration.zero);
-    final trace1_v1 = TraceEvent(value: {'p': true, 'q': false}, timestamp: const Duration(milliseconds: 100));
-    final trace1_v2 = TraceEvent(value: {'p': false, 'q': true}, timestamp: const Duration(milliseconds: 300));
-    final trace1_v3 = TraceEvent(value: {'p': true, 'q': true}, timestamp: const Duration(milliseconds: 500));
-    final trace1_v4 = TraceEvent(value: {'p': false, 'q': false}, timestamp: const Duration(milliseconds: 800));
-    final trace1 = Trace([trace1_v0, trace1_v1, trace1_v2, trace1_v3, trace1_v4]);
+    final trace1_v0 =
+        TraceEvent(value: {'p': true, 'q': false}, timestamp: Duration.zero);
+    final trace1_v1 = TraceEvent(
+        value: {'p': true, 'q': false},
+        timestamp: const Duration(milliseconds: 100));
+    final trace1_v2 = TraceEvent(
+        value: {'p': false, 'q': true},
+        timestamp: const Duration(milliseconds: 300));
+    final trace1_v3 = TraceEvent(
+        value: {'p': true, 'q': true},
+        timestamp: const Duration(milliseconds: 500));
+    final trace1_v4 = TraceEvent(
+        value: {'p': false, 'q': false},
+        timestamp: const Duration(milliseconds: 800));
+    final trace1 =
+        Trace([trace1_v0, trace1_v1, trace1_v2, trace1_v3, trace1_v4]);
 
     final p1 = state<Map<String, bool>>((s) => s['p']!, name: 'p');
     final q1 = state<Map<String, bool>>((s) => s['q']!, name: 'q');
@@ -372,14 +579,16 @@ void main() {
     test('G_[0, 500ms] (p -> F_[0, 400ms] q)', () {
       final intervalG = TimeInterval.upTo(const Duration(milliseconds: 500));
       final intervalF = TimeInterval.upTo(const Duration(milliseconds: 400));
-      final formula = AlwaysTimed(Implies(p1, EventuallyTimed(q1, intervalF)), intervalG);
+      final formula =
+          AlwaysTimed(Implies(p1, EventuallyTimed(q1, intervalF)), intervalG);
       expect(evalM(trace1, formula).holds, isTrue);
     });
 
     test('G_[0, 500ms] (p -> F_[0, 150ms] q)', () {
       final intervalG = TimeInterval.upTo(const Duration(milliseconds: 500));
       final intervalF = TimeInterval.upTo(const Duration(milliseconds: 150));
-      final formula = AlwaysTimed(Implies(p1, EventuallyTimed(q1, intervalF)), intervalG);
+      final formula =
+          AlwaysTimed(Implies(p1, EventuallyTimed(q1, intervalF)), intervalG);
       final result = evalM(trace1, formula);
       expect(result.holds, isFalse);
       expect(result.relatedIndex, 0);
@@ -390,26 +599,32 @@ void main() {
     test('F_[0, 300ms] (p && G_[0, 200ms] q)', () {
       final intervalF = TimeInterval.upTo(const Duration(milliseconds: 300));
       final intervalG = TimeInterval.upTo(const Duration(milliseconds: 200));
-      final formula = EventuallyTimed(And(p1, AlwaysTimed(q1, intervalG)), intervalF);
+      final formula =
+          EventuallyTimed(And(p1, AlwaysTimed(q1, intervalG)), intervalF);
       expect(evalM(trace1, formula).holds, isFalse);
     });
 
     test('F_[0, 800ms] (p && G_[0, 300ms] q)', () {
       final intervalF = TimeInterval.upTo(const Duration(milliseconds: 800));
       final intervalG = TimeInterval.upTo(const Duration(milliseconds: 300));
-      final formula = EventuallyTimed(And(p1, AlwaysTimed(q1, intervalG)), intervalF);
+      final formula =
+          EventuallyTimed(And(p1, AlwaysTimed(q1, intervalG)), intervalF);
       expect(evalM(trace1, formula).holds, isFalse);
     });
 
     // --- Trace 2 and definitions for p U (q R r) ---
     // Trace: (p:T,q:F,r:T @ 0) -> (p:T,q:T,r:T @ 100) -> (p:F,q:T,r:F @ 300) -> (p:T,q:F,r:T @ 500)
-    final trace2_v0 = TraceEvent(value: {'p': true, 'q': false, 'r': true}, timestamp: Duration.zero);
-    final trace2_v1 =
-        TraceEvent(value: {'p': true, 'q': true, 'r': true}, timestamp: const Duration(milliseconds: 100));
-    final trace2_v2 =
-        TraceEvent(value: {'p': false, 'q': true, 'r': false}, timestamp: const Duration(milliseconds: 300));
-    final trace2_v3 =
-        TraceEvent(value: {'p': true, 'q': false, 'r': true}, timestamp: const Duration(milliseconds: 500));
+    final trace2_v0 = TraceEvent(
+        value: {'p': true, 'q': false, 'r': true}, timestamp: Duration.zero);
+    final trace2_v1 = TraceEvent(
+        value: {'p': true, 'q': true, 'r': true},
+        timestamp: const Duration(milliseconds: 100));
+    final trace2_v2 = TraceEvent(
+        value: {'p': false, 'q': true, 'r': false},
+        timestamp: const Duration(milliseconds: 300));
+    final trace2_v3 = TraceEvent(
+        value: {'p': true, 'q': false, 'r': true},
+        timestamp: const Duration(milliseconds: 500));
     final trace2 = Trace([trace2_v0, trace2_v1, trace2_v2, trace2_v3]);
 
     final p2 = state<Map<String, bool>>((s) => s['p']!, name: 'p');
@@ -417,8 +632,10 @@ void main() {
     final r2 = state<Map<String, bool>>((s) => s['r']!, name: 'r');
 
     test('p U_[0, 300ms] (q R_[0, 150ms] r)', () {
-      final intervalU = TimeInterval.upTo(const Duration(milliseconds: 300)); // For U
-      final intervalR = TimeInterval.upTo(const Duration(milliseconds: 150)); // For R
+      final intervalU =
+          TimeInterval.upTo(const Duration(milliseconds: 300)); // For U
+      final intervalR =
+          TimeInterval.upTo(const Duration(milliseconds: 150)); // For R
       final innerRelease = ReleaseTimed(q2, r2, intervalR);
       final formula = UntilTimed(p2, innerRelease, intervalU);
 
@@ -451,34 +668,43 @@ void main() {
     final singleEventTrace = Trace([
       TraceEvent(value: {'p': true, 'q': false}, timestamp: Duration.zero)
     ]);
-    final p = state<Map<String, bool>>((s) => s['p']!, name: 'p'); // Re-use p/q defs
+    final p =
+        state<Map<String, bool>>((s) => s['p']!, name: 'p'); // Re-use p/q defs
     final q = state<Map<String, bool>>((s) => s['q']!, name: 'q');
 
     test('EventuallyTimed on empty trace', () {
-      final formula = EventuallyTimed(p, TimeInterval.upTo(const Duration(seconds: 1)));
+      final formula =
+          EventuallyTimed(p, TimeInterval.upTo(const Duration(seconds: 1)));
       expect(evalM(emptyTrace, formula).holds, isFalse);
-      expect(evalM(emptyTrace, formula).reason, contains('EventuallyTimed evaluated past trace end'));
+      expect(evalM(emptyTrace, formula).reason,
+          contains('EventuallyTimed evaluated past trace end'));
     });
 
     test('AlwaysTimed on empty trace', () {
-      final formula = AlwaysTimed(p, TimeInterval.upTo(const Duration(seconds: 1)));
+      final formula =
+          AlwaysTimed(p, TimeInterval.upTo(const Duration(seconds: 1)));
       expect(evalM(emptyTrace, formula).holds, isTrue); // Vacuously true
     });
 
     test('UntilTimed on empty trace', () {
-      final formula = UntilTimed(p, q, TimeInterval.upTo(const Duration(seconds: 1)));
+      final formula =
+          UntilTimed(p, q, TimeInterval.upTo(const Duration(seconds: 1)));
       expect(evalM(emptyTrace, formula).holds, isFalse);
-      expect(evalM(emptyTrace, formula).reason, contains('UntilTimed evaluated past trace end'));
+      expect(evalM(emptyTrace, formula).reason,
+          contains('UntilTimed evaluated past trace end'));
     });
 
     test('ReleaseTimed on empty trace', () {
-      final formula = ReleaseTimed(p, q, TimeInterval.upTo(const Duration(seconds: 1)));
+      final formula =
+          ReleaseTimed(p, q, TimeInterval.upTo(const Duration(seconds: 1)));
       expect(evalM(emptyTrace, formula).holds, isTrue); // Vacuously true
     });
 
     test('WeakUntilTimed on empty trace', () {
-      final formula = WeakUntilTimed(p, q, TimeInterval.upTo(const Duration(seconds: 1)));
-      expect(evalM(emptyTrace, formula).holds, isTrue); // Vacuously true (G_I p holds)
+      final formula =
+          WeakUntilTimed(p, q, TimeInterval.upTo(const Duration(seconds: 1)));
+      expect(evalM(emptyTrace, formula).holds,
+          isTrue); // Vacuously true (G_I p holds)
     });
 
     test('EventuallyTimed with zero interval', () {
@@ -537,21 +763,27 @@ void main() {
       // Check G_[0,0] q. Fails.
       // Check q U_[0,0] p. Need p at k=0 (in interval). p holds. Need q for j<0 (none).
       // Until holds. Weak Until holds.
-      final formulaQP = WeakUntilTimed(q, p, TimeInterval.exactly(Duration.zero));
+      final formulaQP =
+          WeakUntilTimed(q, p, TimeInterval.exactly(Duration.zero));
       expect(evalM(singleEventTrace, formulaQP).holds, isTrue);
     });
 
     test('EventuallyTimed interval past trace end', () {
       // F_[100ms, 200ms] p on single event trace at 0ms (p=T)
-      final formula =
-          EventuallyTimed(p, TimeInterval(const Duration(milliseconds: 100), const Duration(milliseconds: 200)));
-      expect(evalM(singleEventTrace, formula).holds, isFalse); // No events in interval
+      final formula = EventuallyTimed(
+          p,
+          TimeInterval(const Duration(milliseconds: 100),
+              const Duration(milliseconds: 200)));
+      expect(evalM(singleEventTrace, formula).holds,
+          isFalse); // No events in interval
     });
 
     test('AlwaysTimed interval past trace end', () {
       // G_[100ms, 200ms] p on single event trace at 0ms (p=T)
-      final formula =
-          AlwaysTimed(p, TimeInterval(const Duration(milliseconds: 100), const Duration(milliseconds: 200)));
+      final formula = AlwaysTimed(
+          p,
+          TimeInterval(const Duration(milliseconds: 100),
+              const Duration(milliseconds: 200)));
       expect(evalM(singleEventTrace, formula).holds, isTrue); // Vacuously true
     });
 

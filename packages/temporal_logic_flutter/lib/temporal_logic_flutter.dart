@@ -31,13 +31,17 @@ export 'package:temporal_logic_core/temporal_logic_core.dart'
         weakUntil,
         release;
 export 'package:temporal_logic_mtl/temporal_logic_mtl.dart'
-    show TimeInterval, evaluateMtlTrace, EventuallyTimed, AlwaysTimed, UntilTimed;
+    show
+        TimeInterval,
+        evaluateMtlTrace,
+        EventuallyTimed,
+        AlwaysTimed,
+        UntilTimed;
 
 export 'src/check_status.dart'; // Export the new status enum
+export 'src/stream_evaluation_start.dart';
 // Widgets
 export 'src/ltl_checker_widget.dart';
-// Test Matchers
-export 'src/matchers.dart';
 export 'src/mtl_checker_widget.dart'; // Export the new MTL widget
 // Also exports EvaluationResult, Trace, etc. implicitly from core export
 

@@ -32,7 +32,9 @@ void main() {
     tearDown(() async {
       checker.resultListenable.removeListener(listener);
       checker.dispose();
-      await controller.close();
+      if (!controller.isClosed) {
+        await controller.close();
+      }
     });
 
     TimedValue<TestState> tv(TestState state, int millis) =>
@@ -52,18 +54,14 @@ void main() {
 
     test('Initial state is target and sustained -> Success', () async {
       initializeChecker(initialValue: tv(TestState.target, 0));
-
-      // Wait for timer to complete
-      await Future.delayed(sustainDuration * 1.5);
-      controller.add(tv(TestState.target,
-          150)); // Add event to potentially trigger final check
-      await pumpEventQueue(); // Allow listener to fire
+      controller.add(tv(TestState.target, 150));
+      await pumpEventQueue();
 
       expect(
           recordedStatuses,
           equals([
             CheckStatus.pending, // Initial status after construction
-            CheckStatus.success, // After timer completes
+            CheckStatus.success, // After timestamp-based duration is met
           ]));
     });
 
@@ -83,8 +81,7 @@ void main() {
 
       controller.add(tv(TestState.target, 10)); // Enter target
       await pumpEventQueue();
-      await Future.delayed(sustainDuration * 1.5); // Wait for timer
-      controller.add(tv(TestState.target, 160)); // Stay target
+      controller.add(tv(TestState.target, 160)); // Stay target long enough
       await pumpEventQueue();
 
       expect(
@@ -101,7 +98,6 @@ void main() {
 
       controller.add(tv(TestState.target, 10)); // Enter target
       await pumpEventQueue();
-      await Future.delayed(sustainDuration * 0.5); // Wait half duration
       controller.add(tv(TestState.other, 60)); // Leave target
       await pumpEventQueue();
 
@@ -119,13 +115,10 @@ void main() {
 
       controller.add(tv(TestState.target, 10)); // Enter target (-> Pending)
       await pumpEventQueue();
-      await Future.delayed(sustainDuration * 0.5);
       controller.add(tv(TestState.other, 60)); // Leave target (-> Failure)
       await pumpEventQueue();
-      await Future.delayed(const Duration(milliseconds: 10));
       controller.add(tv(TestState.target, 70)); // Re-enter target (-> Pending)
       await pumpEventQueue();
-      await Future.delayed(sustainDuration * 1.5);
       controller.add(tv(TestState.target, 220)); // Stay target (-> Success)
       await pumpEventQueue();
 
@@ -145,7 +138,6 @@ void main() {
 
       controller.add(tv(TestState.target, 10)); // Enter target (-> Pending)
       await pumpEventQueue();
-      await Future.delayed(sustainDuration * 0.5);
       // Don't add anything else, just close the stream
       await controller.close(); // Triggers onDone which sets failure if pending
       await pumpEventQueue(); // Allow listener to fire

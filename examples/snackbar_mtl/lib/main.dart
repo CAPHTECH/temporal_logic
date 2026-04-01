@@ -2,10 +2,8 @@ import 'dart:async'; // Needed for StreamController
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-// Prefixed imports to potentially avoid conflicts, though less likely here
-import 'package:temporal_logic_core/temporal_logic_core.dart' as temporal_core; // Hide core extensions
-import 'package:temporal_logic_flutter/temporal_logic_flutter.dart' as temporal_flutter;
-import 'package:temporal_logic_mtl/temporal_logic_mtl.dart' as temporal_mtl;
+import 'package:temporal_logic_flutter/temporal_logic_flutter.dart'
+    as temporal_flutter;
 
 // --- State Management ---
 
@@ -52,28 +50,32 @@ class MyHomePage extends ConsumerStatefulWidget {
 
 class _MyHomePageState extends ConsumerState<MyHomePage> {
   // --- Define Operands (Atomic Propositions) using state helper ---
-  static final operandHidden =
-      temporal_flutter.state<SnackbarState>((s) => s == SnackbarState.hidden, name: 'hidden' // Add optional name
-          );
+  static final operandHidden = temporal_flutter.state<SnackbarState>(
+      (s) => s == SnackbarState.hidden,
+      name: 'hidden' // Add optional name
+      );
 
   // --- Define Time Intervals (Only for first check) ---
-  static final intervalCheckDuration = temporal_mtl.TimeInterval(
+  static final intervalCheckDuration = temporal_flutter.TimeInterval(
     Duration.zero,
     const Duration(milliseconds: 2500), // 2.5 seconds
   );
 
   // Stream controller for TimedValue
-  late StreamController<temporal_core.TimedValue<SnackbarState>> _snackbarStreamController;
+  late StreamController<temporal_flutter.TimedValue<SnackbarState>>
+      _snackbarStreamController;
   // Initial timed value
-  late temporal_core.TimedValue<SnackbarState> _initialSnackbarState;
+  late temporal_flutter.TimedValue<SnackbarState> _initialSnackbarState;
 
   @override
   void initState() {
     super.initState();
     // Use broadcast controller for multiple listeners
-    _snackbarStreamController = StreamController<temporal_core.TimedValue<SnackbarState>>.broadcast();
+    _snackbarStreamController = StreamController<
+        temporal_flutter.TimedValue<SnackbarState>>.broadcast();
     // Set initial state
-    _initialSnackbarState = temporal_core.TimedValue(SnackbarState.hidden, _stopwatch.elapsed);
+    _initialSnackbarState =
+        temporal_flutter.TimedValue(SnackbarState.hidden, _stopwatch.elapsed);
     // Add initial state to stream
     _snackbarStreamController.add(_initialSnackbarState);
   }
@@ -90,7 +92,8 @@ class _MyHomePageState extends ConsumerState<MyHomePage> {
       if (next > (previous ?? 0)) {
         // --- Add TimedValue when snackbar should be shown ---
         final showTime = _stopwatch.elapsed;
-        _snackbarStreamController.add(temporal_core.TimedValue(SnackbarState.visible, showTime));
+        _snackbarStreamController
+            .add(temporal_flutter.TimedValue(SnackbarState.visible, showTime));
 
         ScaffoldMessenger.of(context).hideCurrentSnackBar();
         final controller = ScaffoldMessenger.of(context).showSnackBar(
@@ -107,7 +110,8 @@ class _MyHomePageState extends ConsumerState<MyHomePage> {
           final hideTime = _stopwatch.elapsed;
           // Only add if controller is still active
           if (mounted && !_snackbarStreamController.isClosed) {
-            _snackbarStreamController.add(temporal_core.TimedValue(SnackbarState.hidden, hideTime));
+            _snackbarStreamController.add(
+                temporal_flutter.TimedValue(SnackbarState.hidden, hideTime));
           }
         });
       }
@@ -118,7 +122,7 @@ class _MyHomePageState extends ConsumerState<MyHomePage> {
     final currentTriggerCount = ref.watch(snackbarTriggerProvider);
 
     // Define the MTL formula F_[0, 2.5s] (hidden)
-    final formulaEventuallyHiddenShort = temporal_mtl.EventuallyTimed(
+    final formulaEventuallyHiddenShort = temporal_flutter.EventuallyTimed(
       operandHidden,
       intervalCheckDuration,
     );
@@ -143,16 +147,18 @@ class _MyHomePageState extends ConsumerState<MyHomePage> {
               const Text(
                   '(F: Eventually, [a,b]: time interval, Sustained(S, d): State S holds for duration d)'), // Updated legend
               const SizedBox(height: 20),
-              Text('Press the button to show a snackbar (Trigger: $currentTriggerCount)'), // Show trigger count
+              Text(
+                  'Press the button to show a snackbar (Trigger: $currentTriggerCount)'), // Show trigger count
               const SizedBox(height: 10),
               // Display current state using StreamBuilder or alternative
-              StreamBuilder<temporal_core.TimedValue<SnackbarState>>(
+              StreamBuilder<temporal_flutter.TimedValue<SnackbarState>>(
                   stream: _snackbarStreamController.stream,
                   initialData: _initialSnackbarState, // Use initial value
                   builder: (context, snapshot) {
                     final stateName = snapshot.data?.value.name ?? 'unknown';
                     final time = snapshot.data?.timestamp ?? Duration.zero;
-                    return Text('Last Tracked State: $stateName at ${time.inMilliseconds}ms');
+                    return Text(
+                        'Last Tracked State: $stateName at ${time.inMilliseconds}ms');
                   }),
 
               const Divider(height: 40),
@@ -164,14 +170,16 @@ class _MyHomePageState extends ConsumerState<MyHomePage> {
               ),
               const Text('Is "hidden" state reached within 2.5s of start?'),
               Padding(
-                padding: const EdgeInsets.symmetric(vertical: 8.0), // Add padding
+                padding:
+                    const EdgeInsets.symmetric(vertical: 8.0), // Add padding
                 child: Tooltip(
                   message: 'F_[0, 2.5s] (hidden)',
                   child: temporal_flutter.MtlCheckerWidget<SnackbarState>(
                     stream: _snackbarStreamController.stream,
                     initialValue: _initialSnackbarState,
                     formula: formulaEventuallyHiddenShort,
-                    builder: (context, result, details) => _genericIconBuilder(context, result, details),
+                    builder: (context, result, details) =>
+                        _genericIconBuilder(context, result, details),
                   ),
                 ),
               ),
@@ -184,16 +192,18 @@ class _MyHomePageState extends ConsumerState<MyHomePage> {
               ),
               const Text('Is "hidden" state maintained for 1s once entered?'),
               Padding(
-                padding: const EdgeInsets.symmetric(vertical: 8.0), // Add padding
+                padding:
+                    const EdgeInsets.symmetric(vertical: 8.0), // Add padding
                 child: Tooltip(
                   message: 'Sustained(hidden, 1s)',
-                  child: temporal_flutter.SustainedStateCheckerWidget<SnackbarState>(
+                  child: temporal_flutter.SustainedStateCheckerWidget<
+                      SnackbarState>(
                     stream: _snackbarStreamController.stream,
                     initialValue: _initialSnackbarState,
                     targetState: SnackbarState.hidden,
                     sustainDuration: const Duration(seconds: 1),
-                    builder: (context, status) =>
-                        _genericIconBuilder(context, status == temporal_flutter.CheckStatus.success, status),
+                    builder: (context, status) => _genericIconBuilder(context,
+                        status == temporal_flutter.CheckStatus.success, status),
                   ),
                 ),
               ),
@@ -213,10 +223,12 @@ class _MyHomePageState extends ConsumerState<MyHomePage> {
   }
 
   // Helper for default icon builder (adaptable)
-  Widget _genericIconBuilder(BuildContext context, bool result, [dynamic details]) {
+  Widget _genericIconBuilder(BuildContext context, bool result,
+      [dynamic details]) {
     // Can add more complex logic using 'details' if it's an EvaluationResult
     String tooltip = result ? 'Check Holds' : 'Check Fails';
-    if (details is temporal_core.EvaluationResult && details.reason != null) {
+    if (details is temporal_flutter.EvaluationResult &&
+        details.reason != null) {
       tooltip = details.reason!;
     } else if (details is temporal_flutter.CheckStatus) {
       switch (details) {

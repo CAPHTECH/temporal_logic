@@ -2,6 +2,8 @@ import 'dart:async';
 
 import 'package:temporal_logic_core/temporal_logic_core.dart'; // Import core
 
+import 'stream_evaluation_start.dart';
+
 /// Provides evaluation of a Linear Temporal Logic (LTL) [Formula]<S>
 /// against a stream of state values.
 ///
@@ -23,6 +25,7 @@ class StreamLtlChecker<S> {
   StreamSubscription<S>? _subscription;
   final _resultController = StreamController<bool>.broadcast();
   final S? _initialValue; // Optional initial state
+  final StreamEvaluationStart _evaluationStart;
 
   /// A broadcast [Stream] emitting the boolean result of the LTL [formula]
   /// evaluation against the current trace.
@@ -41,6 +44,8 @@ class StreamLtlChecker<S> {
   /// - [initialValue]: An optional state value to be treated as the first element
   ///   in the trace, before any events from the [stream] are processed. If `null`,
   ///   the initial trace is empty.
+  /// - [evaluationStart]: Whether to evaluate from the beginning of the
+  ///   accumulated trace or from the most recent state.
   ///
   /// An initial evaluation is performed based on the trace containing only the
   /// [initialValue] (if provided) or an empty trace. This initial result is
@@ -52,9 +57,11 @@ class StreamLtlChecker<S> {
     required Stream<S> stream,
     required Formula<S> formula, // Use Formula<S>
     S? initialValue,
+    StreamEvaluationStart evaluationStart = StreamEvaluationStart.beginning,
   })  : _stream = stream,
         _formula = formula,
-        _initialValue = initialValue {
+        _initialValue = initialValue,
+        _evaluationStart = evaluationStart {
     if (_initialValue != null) {
       _trace.add(_initialValue);
     }
@@ -113,35 +120,18 @@ class StreamLtlChecker<S> {
   ///
   /// This method performs the LTL evaluation based on the current internal trace.
   /// It uses [evaluateTrace] from `temporal_logic_core`, starting the evaluation
-  /// from the most recent state (last index) in the trace, which aligns with
-  /// typical stream monitoring semantics where the property is checked against
-  /// the current state and its future implications.
+  /// from the position configured by [StreamEvaluationStart].
   ///
   /// Returns the boolean result of the evaluation. If the internal trace is
   /// empty, it evaluates the formula on an empty trace (using index 0).
   bool check() {
-    // For stream checking, LTL properties are often checked at the *current*
-    // state (the end of the trace). We need to use evaluateTrace directly.
     if (_trace.isEmpty) {
-      // Decide behavior for empty trace. Many LTL formulas are false on empty.
-      // Atomic propositions need a state. G(p) is true, F(p) is false.
-      // evaluateTrace handles this, but we can short-circuit simple cases.
-      // Let's assume false for simplicity if the formula isn't trivial like G(p).
-      // Alternatively, call evaluateTrace with index 0 on an empty trace.
       final tempTrace = Trace<S>.empty();
       return evaluateTrace(tempTrace, _formula).holds;
     }
-    // Convert the list to a Trace (using default 1ms interval for LTL)
     final timedTrace = Trace<S>.fromList(_trace);
-    // Evaluate the formula starting from the *last* state in the trace.
-    // Note: This interpretation might need refinement depending on the exact
-    // LTL semantics desired for stream checking (e.g., should F(p) look
-    // only at the current state or the whole suffix starting now?).
-    // Standard LTL semantics evaluate over the suffix starting at the index.
-    // Evaluating ONLY the last state (index _trace.length - 1) is common for simple checks.
-    // Let's stick to standard suffix evaluation starting at the current point (last index).
-    final result =
-        evaluateTrace(timedTrace, _formula, startIndex: _trace.length - 1);
+    final startIndex = _evaluationStart.resolveStartIndex(_trace.length);
+    final result = evaluateTrace(timedTrace, _formula, startIndex: startIndex);
     return result.holds;
   }
 

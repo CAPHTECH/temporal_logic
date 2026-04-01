@@ -17,7 +17,7 @@ It provides tools to monitor streams of application state changes and evaluate t
 *   **Trace Recording:** `TraceRecorder` widget (or utility) to capture a sequence of state changes from a stream into a `Trace` object for later analysis or evaluation.
 *   **Visualization Widgets (Examples/Utilities):**
     *   `LtlCheckerWidget`, `MtlCheckerWidget`, `SustainedStateCheckerWidget`: Example widgets that likely consume a stream checker and display its current status (`CheckStatus`: unknown, success, failure).
-*   **State Matching:** Utility functions or classes (in `matchers.dart`) likely used to define the atomic propositions based on application state.
+*   **Test Matchers:** Import `package:temporal_logic_flutter/temporal_logic_flutter_test.dart` in tests to use helpers like `satisfiesLtl`.
 *   **Status Reporting:** `CheckStatus` enum to represent the outcome of a check.
 
 ## Getting Started
@@ -41,7 +41,7 @@ Then run `flutter pub get`.
 
 While the exact API might evolve, the general usage pattern would involve:
 
-1.  **Defining State Propositions:** Use helpers (likely from `matchers.dart` or `temporal_logic_core.builder`) to create `AtomicProposition` instances based on your application state (e.g., from a BLoC, Riverpod provider, ValueNotifier, etc.).
+1.  **Defining State Propositions:** Use builders from `temporal_logic_core` to create `AtomicProposition` instances based on your application state (e.g., from a BLoC, Riverpod provider, ValueNotifier, etc.).
 
     ```dart
     // Example using a hypothetical state class `CounterState`
@@ -108,6 +108,7 @@ You can use the `TraceRecorder` widget and the `satisfiesLtl` matcher from this 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:temporal_logic_core/temporal_logic_core.dart';
 import 'package:temporal_logic_flutter/temporal_logic_flutter.dart';
+import 'package:temporal_logic_flutter/temporal_logic_flutter_test.dart';
 
 // Example test using TraceRecorder and satisfiesLtl
 testWidgets('MyWidget follows LTL specification', (tester) async {

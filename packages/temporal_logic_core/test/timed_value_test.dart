@@ -57,7 +57,8 @@ void main() {
       const te1 = TraceEvent<bool>(timestamp: Duration.zero, value: true);
       const te2 = TraceEvent<bool>(timestamp: Duration.zero, value: true);
       const te3 = TraceEvent<bool>(timestamp: Duration.zero, value: false);
-      const te4 = TraceEvent<bool>(timestamp: Duration(milliseconds: 1), value: true);
+      const te4 =
+          TraceEvent<bool>(timestamp: Duration(milliseconds: 1), value: true);
 
       expect(te1, equals(te2));
       expect(te1.hashCode, equals(te2.hashCode));
@@ -69,17 +70,24 @@ void main() {
     });
 
     test('toString formats correctly', () {
-      const te = TraceEvent<String>(timestamp: Duration(milliseconds: 123), value: 'state_b');
+      const te = TraceEvent<String>(
+          timestamp: Duration(milliseconds: 123), value: 'state_b');
       expect(te.toString(), equals('state_b @ 123ms'));
     });
   });
 
   group('Trace', () {
     final event1 = TraceEvent<int>(timestamp: Duration.zero, value: 1);
-    final event2 = TraceEvent<int>(timestamp: Duration(milliseconds: 100), value: 2);
-    final event3 = TraceEvent<int>(timestamp: Duration(milliseconds: 100), value: 3); // Same timestamp as event2
-    final event4 = TraceEvent<int>(timestamp: Duration(milliseconds: 200), value: 4);
-    final eventNonMonotonic = TraceEvent<int>(timestamp: Duration(milliseconds: 50), value: 99); // Breaks monotonicity
+    final event2 =
+        TraceEvent<int>(timestamp: Duration(milliseconds: 100), value: 2);
+    final event3 = TraceEvent<int>(
+        timestamp: Duration(milliseconds: 100),
+        value: 3); // Same timestamp as event2
+    final event4 =
+        TraceEvent<int>(timestamp: Duration(milliseconds: 200), value: 4);
+    final eventNonMonotonic = TraceEvent<int>(
+        timestamp: Duration(milliseconds: 50),
+        value: 99); // Breaks monotonicity
 
     final validEvents = [event1, event2, event3, event4];
     final invalidEvents = [event1, event2, eventNonMonotonic, event4];
@@ -92,29 +100,17 @@ void main() {
     });
 
     test('constructor throws ArgumentError for non-monotonic timestamps', () {
-      // This test relies on assertions being enabled (typically in debug mode)
-      bool assertionTriggered = false;
-      try {
-        Trace<int>(invalidEvents);
-      } catch (e) {
-        if (e is ArgumentError) {
-          assertionTriggered = true;
-          expect(e.message, contains('Timestamps must be monotonically non-decreasing'));
-        } else {
-          rethrow; // Should only catch ArgumentError from the assert
-        }
-      }
-      // In Dart versions where assertions are disabled in test runs by default,
-      // this assertion check might not run, so we conditionally check.
-      // expect(assertionTriggered, isTrue, reason: 'Assertion for non-monotonic timestamp did not trigger. Ensure assertions are enabled.');
-      // Let's just check it doesn't throw unexpectedly if assertions are off.
-      if (!assertionTriggered) {
-        // If assertions are off, creating the Trace should still work,
-        // but evaluation might fail later.
-        final trace = Trace<int>(invalidEvents);
-        expect(trace.events, orderedEquals(invalidEvents));
-      }
-    }, skip: 'AssertionError cannot be reliably caught in all test environments');
+      expect(
+        () => Trace<int>(invalidEvents),
+        throwsA(
+          isA<ArgumentError>().having(
+            (error) => error.message,
+            'message',
+            contains('Timestamps must be monotonically non-decreasing'),
+          ),
+        ),
+      );
+    });
 
     test('Trace.empty', () {
       final trace = Trace<String>.empty();
@@ -128,9 +124,16 @@ void main() {
         final values = ['a', 'b', 'c'];
         final trace = Trace.fromList(values);
         expect(trace.length, equals(3));
-        expect(trace.events[0], equals(TraceEvent(timestamp: Duration.zero, value: 'a')));
-        expect(trace.events[1], equals(TraceEvent(timestamp: Duration(milliseconds: 1), value: 'b')));
-        expect(trace.events[2], equals(TraceEvent(timestamp: Duration(milliseconds: 2), value: 'c')));
+        expect(trace.events[0],
+            equals(TraceEvent(timestamp: Duration.zero, value: 'a')));
+        expect(
+            trace.events[1],
+            equals(
+                TraceEvent(timestamp: Duration(milliseconds: 1), value: 'b')));
+        expect(
+            trace.events[2],
+            equals(
+                TraceEvent(timestamp: Duration(milliseconds: 2), value: 'c')));
       });
 
       test('custom interval', () {
@@ -138,8 +141,10 @@ void main() {
         const interval = Duration(seconds: 1);
         final trace = Trace.fromList(values, interval: interval);
         expect(trace.length, equals(2));
-        expect(trace.events[0], equals(TraceEvent(timestamp: Duration.zero, value: 10)));
-        expect(trace.events[1], equals(TraceEvent(timestamp: Duration(seconds: 1), value: 20)));
+        expect(trace.events[0],
+            equals(TraceEvent(timestamp: Duration.zero, value: 10)));
+        expect(trace.events[1],
+            equals(TraceEvent(timestamp: Duration(seconds: 1), value: 20)));
       });
 
       test('zero interval', () {
@@ -147,8 +152,10 @@ void main() {
         const interval = Duration.zero;
         final trace = Trace.fromList(values, interval: interval);
         expect(trace.length, equals(2));
-        expect(trace.events[0], equals(TraceEvent(timestamp: Duration.zero, value: true)));
-        expect(trace.events[1], equals(TraceEvent(timestamp: Duration.zero, value: false)));
+        expect(trace.events[0],
+            equals(TraceEvent(timestamp: Duration.zero, value: true)));
+        expect(trace.events[1],
+            equals(TraceEvent(timestamp: Duration.zero, value: false)));
       });
 
       test('empty list', () {
@@ -176,11 +183,14 @@ void main() {
       ]);
       final trace3 = Trace<int>([
         TraceEvent(timestamp: Duration.zero, value: 1),
-        TraceEvent(timestamp: Duration(milliseconds: 10), value: 3), // Different value
+        TraceEvent(
+            timestamp: Duration(milliseconds: 10), value: 3), // Different value
       ]);
       final trace4 = Trace<int>([
         TraceEvent(timestamp: Duration.zero, value: 1),
-        TraceEvent(timestamp: Duration(milliseconds: 20), value: 2), // Different timestamp
+        TraceEvent(
+            timestamp: Duration(milliseconds: 20),
+            value: 2), // Different timestamp
       ]);
       final trace5 = Trace<int>([
         TraceEvent(timestamp: Duration.zero, value: 1), // Shorter trace
@@ -210,7 +220,8 @@ void main() {
         TraceEvent(timestamp: Duration(milliseconds: 50), value: "Middle"),
         TraceEvent(timestamp: Duration(seconds: 1), value: "End"),
       ]);
-      expect(trace.toString(), equals('Trace(Start @ 0ms, Middle @ 50ms, End @ 1000ms)'));
+      expect(trace.toString(),
+          equals('Trace(Start @ 0ms, Middle @ 50ms, End @ 1000ms)'));
       expect(Trace<int>.empty().toString(), equals('Trace()'));
     });
   });
