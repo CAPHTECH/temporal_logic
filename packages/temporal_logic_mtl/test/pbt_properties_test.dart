@@ -43,8 +43,7 @@ void main() {
       (input) {
         final (trace, p, q, interval) = input;
         for (var si = 0; si <= trace.length; si++) {
-          final rip = evaluateMtlTrace(
-                  trace, ReleaseTimed(p, q, interval),
+          final rip = evaluateMtlTrace(trace, ReleaseTimed(p, q, interval),
                   startIndex: si)
               .holds;
           final dual = evaluateMtlTrace(
@@ -74,12 +73,10 @@ void main() {
       (input) {
         final (trace, p, q, interval) = input;
         for (var si = 0; si <= trace.length; si++) {
-          final wip = evaluateMtlTrace(
-                  trace, WeakUntilTimed(p, q, interval),
+          final wip = evaluateMtlTrace(trace, WeakUntilTimed(p, q, interval),
                   startIndex: si)
               .holds;
-          final dual = evaluateMtlTrace(
-                  trace,
+          final dual = evaluateMtlTrace(trace,
                   Or(AlwaysTimed(p, interval), UntilTimed(p, q, interval)),
                   startIndex: si)
               .holds;
@@ -124,8 +121,7 @@ void main() {
           final mtlResult =
               evaluateMtlTrace(trace, formula, startIndex: si).holds;
           expect(coreResult, equals(mtlResult),
-              reason:
-                  'Core vs MTL mismatch for $formula at si=$si on $trace');
+              reason: 'Core vs MTL mismatch for $formula at si=$si on $trace');
         }
       },
     );
@@ -149,8 +145,7 @@ void main() {
           final shifted =
               evaluateMtlTrace(shiftedTrace, formula, startIndex: si).holds;
           expect(original, equals(shifted),
-              reason:
-                  'Time-translation changed result for $formula at si=$si');
+              reason: 'Time-translation changed result for $formula at si=$si');
         }
       },
     );
@@ -161,8 +156,7 @@ void main() {
       'suffix normalization (timed formulas)',
       (trace, phi) {
         for (var si = 0; si <= trace.length; si++) {
-          final direct =
-              evaluateMtlTrace(trace, phi, startIndex: si).holds;
+          final direct = evaluateMtlTrace(trace, phi, startIndex: si).holds;
           final suffixEvents = trace.events.sublist(si);
           final baseTs = suffixEvents.isNotEmpty
               ? suffixEvents.first.timestamp
@@ -175,8 +169,7 @@ void main() {
           final viaSuffix =
               evaluateMtlTrace(suffixTrace, phi, startIndex: 0).holds;
           expect(direct, equals(viaSuffix),
-              reason:
-                  'eval($phi, si=$si) != eval(suffix, 0) on $trace');
+              reason: 'eval($phi, si=$si) != eval(suffix, 0) on $trace');
         }
       },
     );
@@ -200,8 +193,7 @@ void main() {
         final (trace, p, inner, expansion) = input;
         // Build outer interval: expand inner by `expansion` ms on each side
         final outerLb = inner.lowerBound - Duration(milliseconds: expansion);
-        final effectiveLb =
-            outerLb.isNegative ? Duration.zero : outerLb;
+        final effectiveLb = outerLb.isNegative ? Duration.zero : outerLb;
         final outer = TimeInterval(
           effectiveLb,
           inner.upperBound + Duration(milliseconds: expansion),
@@ -209,33 +201,27 @@ void main() {
 
         for (var si = 0; si <= trace.length; si++) {
           // F_I(p) → F_J(p) (inner ⊆ outer)
-          final fInner = evaluateMtlTrace(
-                  trace, EventuallyTimed(p, inner),
-                  startIndex: si)
-              .holds;
-          final fOuter = evaluateMtlTrace(
-                  trace, EventuallyTimed(p, outer),
-                  startIndex: si)
-              .holds;
+          final fInner =
+              evaluateMtlTrace(trace, EventuallyTimed(p, inner), startIndex: si)
+                  .holds;
+          final fOuter =
+              evaluateMtlTrace(trace, EventuallyTimed(p, outer), startIndex: si)
+                  .holds;
           if (fInner) {
             expect(fOuter, isTrue,
-                reason:
-                    'F_$inner($p) true but F_$outer($p) false at si=$si');
+                reason: 'F_$inner($p) true but F_$outer($p) false at si=$si');
           }
 
           // G_J(p) → G_I(p) (inner ⊆ outer)
-          final gOuter = evaluateMtlTrace(
-                  trace, AlwaysTimed(p, outer),
-                  startIndex: si)
-              .holds;
-          final gInner = evaluateMtlTrace(
-                  trace, AlwaysTimed(p, inner),
-                  startIndex: si)
-              .holds;
+          final gOuter =
+              evaluateMtlTrace(trace, AlwaysTimed(p, outer), startIndex: si)
+                  .holds;
+          final gInner =
+              evaluateMtlTrace(trace, AlwaysTimed(p, inner), startIndex: si)
+                  .holds;
           if (gOuter) {
             expect(gInner, isTrue,
-                reason:
-                    'G_$outer($p) true but G_$inner($p) false at si=$si');
+                reason: 'G_$outer($p) true but G_$inner($p) false at si=$si');
           }
         }
       },
@@ -262,6 +248,22 @@ void main() {
           final result = evaluateMtlTrace(trace, formula, startIndex: si);
           expect(result, isA<EvaluationResult>());
         }
+      },
+    );
+  });
+
+  group('Unbounded interval invariants', () {
+    Glados(any.intInRange(101, 401), config).test(
+      'atLeast stays open-ended for large lower bounds',
+      (years) {
+        final lowerBound = Duration(days: 365 * years);
+        final interval = TimeInterval.atLeast(lowerBound);
+
+        expect(
+          interval.contains(lowerBound + const Duration(days: 365)),
+          isTrue,
+          reason: 'atLeast($lowerBound) must include later durations',
+        );
       },
     );
   });

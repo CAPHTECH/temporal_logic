@@ -179,7 +179,8 @@ final class WeakUntilTimed<T> extends Formula<T> {
 /// - See the documentation for specific MTL operators for detailed semantics.
 ///
 /// **Note:** This function uses [_evaluateRecursive] internally.
-EvaluationResult evaluateMtlTrace<T>(Trace<T> trace, Formula<T> formula, {int startIndex = 0}) {
+EvaluationResult evaluateMtlTrace<T>(Trace<T> trace, Formula<T> formula,
+    {int startIndex = 0}) {
   // Check for empty trace for certain operators early?
   // Or let recursive calls handle it.
   if (trace.isEmpty && startIndex == 0) {
@@ -190,14 +191,16 @@ EvaluationResult evaluateMtlTrace<T>(Trace<T> trace, Formula<T> formula, {int st
 
   // Ensure startIndex is within reasonable bounds before recursion
   if (startIndex < 0 || startIndex > trace.length) {
-    return EvaluationResult.failure('Start index $startIndex out of bounds for trace length ${trace.length}');
+    return EvaluationResult.failure(
+        'Start index $startIndex out of bounds for trace length ${trace.length}');
   }
 
   return _evaluateRecursive(trace, formula, startIndex);
 }
 
 // Internal recursive evaluation function (Handles LTL and MTL)
-EvaluationResult _evaluateRecursive<T>(Trace<T> trace, Formula<T> formula, int index) {
+EvaluationResult _evaluateRecursive<T>(
+    Trace<T> trace, Formula<T> formula, int index) {
   // Base case: If index is beyond trace length, behavior depends on operator.
   // Handled within each operator case.
 
@@ -214,7 +217,9 @@ EvaluationResult _evaluateRecursive<T>(Trace<T> trace, Formula<T> formula, int i
   switch (formula) {
     case AtomicProposition<T> p:
       if (index >= trace.length)
-        return EvaluationResult.failure("Atomic proposition evaluated past trace end.", relatedIndex: index);
+        return EvaluationResult.failure(
+            "Atomic proposition evaluated past trace end.",
+            relatedIndex: index);
       final currentEvent = trace.events[index];
       final holds = p.predicate(currentEvent.value);
       return EvaluationResult(holds,
@@ -225,7 +230,8 @@ EvaluationResult _evaluateRecursive<T>(Trace<T> trace, Formula<T> formula, int i
     case Not<T> f:
       final innerResult = _evaluateRecursive(trace, f.operand, index);
       return EvaluationResult(!innerResult.holds,
-          reason: innerResult.holds ? 'Negated formula held' : innerResult.reason,
+          reason:
+              innerResult.holds ? 'Negated formula held' : innerResult.reason,
           relatedIndex: innerResult.relatedIndex,
           relatedTimestamp: innerResult.relatedTimestamp);
 
@@ -246,14 +252,17 @@ EvaluationResult _evaluateRecursive<T>(Trace<T> trace, Formula<T> formula, int i
 
     case Implies<T> f:
       final leftResult = _evaluateRecursive(trace, f.left, index);
-      if (!leftResult.holds) return const EvaluationResult.success(); // Antecedent false -> implication holds
+      if (!leftResult.holds)
+        return const EvaluationResult
+            .success(); // Antecedent false -> implication holds
       // Antecedent true, result is the evaluation of the consequent
       return _evaluateRecursive(trace, f.right, index);
 
     case Next<T> f:
       final nextIndex = index + 1;
       if (nextIndex >= trace.length)
-        return EvaluationResult.failure('Next evaluated past trace end.', relatedIndex: index);
+        return EvaluationResult.failure('Next evaluated past trace end.',
+            relatedIndex: index);
       // Evaluate operand at the next index
       return _evaluateRecursive(trace, f.operand, nextIndex);
 
@@ -262,8 +271,10 @@ EvaluationResult _evaluateRecursive<T>(Trace<T> trace, Formula<T> formula, int i
         final stepResult = _evaluateRecursive(trace, f.operand, k);
         if (!stepResult.holds) {
           // Found a point where the operand fails
-          return EvaluationResult.failure('Always failed: ${stepResult.reason ?? "Operand failed"}',
-              relatedIndex: k, relatedTimestamp: trace.events[k].timestamp);
+          return EvaluationResult.failure(
+              'Always failed: ${stepResult.reason ?? "Operand failed"}',
+              relatedIndex: k,
+              relatedTimestamp: trace.events[k].timestamp);
         }
       }
       // Operand holds for all k >= index (or suffix is empty)
@@ -271,21 +282,27 @@ EvaluationResult _evaluateRecursive<T>(Trace<T> trace, Formula<T> formula, int i
 
     case Eventually<T> f: // F phi
       if (index >= trace.length)
-        return EvaluationResult.failure('Eventually evaluated on empty trace suffix.',
+        return EvaluationResult.failure(
+            'Eventually evaluated on empty trace suffix.',
             relatedIndex: index); // F phi is false on empty suffix
       for (var k = index; k < trace.length; k++) {
         final stepResult = _evaluateRecursive(trace, f.operand, k);
         if (stepResult.holds) {
-          return const EvaluationResult.success(); // Found a state where it holds
+          return const EvaluationResult
+              .success(); // Found a state where it holds
         }
       }
       // Operand never holds for k >= index
       return EvaluationResult.failure('Eventually failed: Operand never held.',
-          relatedIndex: index, relatedTimestamp: trace.events.isNotEmpty ? trace.events[index].timestamp : null);
+          relatedIndex: index,
+          relatedTimestamp:
+              trace.events.isNotEmpty ? trace.events[index].timestamp : null);
 
     case Until<T> f: // left U right
       if (index >= trace.length)
-        return EvaluationResult.failure('Until evaluated on empty trace suffix.', relatedIndex: index);
+        return EvaluationResult.failure(
+            'Until evaluated on empty trace suffix.',
+            relatedIndex: index);
       for (var k = index; k < trace.length; k++) {
         final rightResult = _evaluateRecursive(trace, f.right, k);
         if (rightResult.holds) {
@@ -315,14 +332,18 @@ EvaluationResult _evaluateRecursive<T>(Trace<T> trace, Formula<T> formula, int i
       }
       // Loop finished: Right never held
       return EvaluationResult.failure('Until failed: Right operand never held.',
-          relatedIndex: index, relatedTimestamp: trace.events.isNotEmpty ? trace.events[index].timestamp : null);
+          relatedIndex: index,
+          relatedTimestamp:
+              trace.events.isNotEmpty ? trace.events[index].timestamp : null);
 
     case WeakUntil<T> f: // left W right === G(left) or (left U right)
       // Evaluate G(left)
-      final alwaysLeftResult = _evaluateRecursive(trace, Always<T>(f.left), index);
+      final alwaysLeftResult =
+          _evaluateRecursive(trace, Always<T>(f.left), index);
       if (alwaysLeftResult.holds) return const EvaluationResult.success();
       // Evaluate (left U right)
-      final untilResult = _evaluateRecursive(trace, Until<T>(f.left, f.right), index);
+      final untilResult =
+          _evaluateRecursive(trace, Until<T>(f.left, f.right), index);
       return untilResult;
 
     case Release<T> f: // left R right === !(!left U_I !right)
@@ -343,12 +364,15 @@ EvaluationResult _evaluateRecursive<T>(Trace<T> trace, Formula<T> formula, int i
     case EventuallyTimed<T> f: // F_I phi
       if (currentIndexTimestamp == null) {
         // Can't evaluate timed interval from past end of trace
-        return EvaluationResult.failure('EventuallyTimed evaluated past trace end.', relatedIndex: index);
+        return EvaluationResult.failure(
+            'EventuallyTimed evaluated past trace end.',
+            relatedIndex: index);
       }
       for (var k = index; k < trace.length; k++) {
-        final Duration timeDiff = trace.events[k].timestamp - currentIndexTimestamp;
+        final Duration timeDiff =
+            trace.events[k].timestamp - currentIndexTimestamp;
         // Optimization: if time difference exceeds interval, operand cannot hold within it later
-        if (timeDiff > f.interval.upperBound) break;
+        if (f.interval.exceedsUpperBound(timeDiff)) break;
 
         if (f.interval.contains(timeDiff)) {
           final stepResult = _evaluateRecursive(trace, f.operand, k);
@@ -359,8 +383,10 @@ EvaluationResult _evaluateRecursive<T>(Trace<T> trace, Formula<T> formula, int i
         }
       }
       // Operand never held within the interval I relative to index
-      return EvaluationResult.failure('EventuallyTimed failed: Operand never held within interval ${f.interval}.',
-          relatedIndex: index, relatedTimestamp: currentIndexTimestamp);
+      return EvaluationResult.failure(
+          'EventuallyTimed failed: Operand never held within interval ${f.interval}.',
+          relatedIndex: index,
+          relatedTimestamp: currentIndexTimestamp);
 
     case AlwaysTimed<T> f: // G_I phi
       if (currentIndexTimestamp == null) {
@@ -368,9 +394,10 @@ EvaluationResult _evaluateRecursive<T>(Trace<T> trace, Formula<T> formula, int i
         return const EvaluationResult.success();
       }
       for (var k = index; k < trace.length; k++) {
-        final Duration timeDiff = trace.events[k].timestamp - currentIndexTimestamp;
+        final Duration timeDiff =
+            trace.events[k].timestamp - currentIndexTimestamp;
         // Optimization: if time difference exceeds interval, no need to check further
-        if (timeDiff > f.interval.upperBound) break;
+        if (f.interval.exceedsUpperBound(timeDiff)) break;
 
         if (f.interval.contains(timeDiff)) {
           final stepResult = _evaluateRecursive(trace, f.operand, k);
@@ -389,13 +416,15 @@ EvaluationResult _evaluateRecursive<T>(Trace<T> trace, Formula<T> formula, int i
 
     case UntilTimed<T> f: // left U_I right
       if (currentIndexTimestamp == null) {
-        return EvaluationResult.failure('UntilTimed evaluated past trace end.', relatedIndex: index);
+        return EvaluationResult.failure('UntilTimed evaluated past trace end.',
+            relatedIndex: index);
       }
       for (var k = index; k < trace.length; k++) {
-        final Duration timeDiff = trace.events[k].timestamp - currentIndexTimestamp;
+        final Duration timeDiff =
+            trace.events[k].timestamp - currentIndexTimestamp;
 
         // Check if right operand holds within interval first
-        if (timeDiff <= f.interval.upperBound && f.interval.contains(timeDiff)) {
+        if (f.interval.contains(timeDiff)) {
           final rightResult = _evaluateRecursive(trace, f.right, k);
           if (rightResult.holds) {
             // Right holds at k within interval. Now check if Left held until k.
@@ -415,7 +444,7 @@ EvaluationResult _evaluateRecursive<T>(Trace<T> trace, Formula<T> formula, int i
         }
 
         // Optimization: If we passed the interval, right can't hold within it later.
-        if (timeDiff > f.interval.upperBound) break;
+        if (f.interval.exceedsUpperBound(timeDiff)) break;
 
         // If right didn't hold at k (or k wasn't in interval yet), left must hold at k to continue.
         final leftResult = _evaluateRecursive(trace, f.left, k);
@@ -429,8 +458,10 @@ EvaluationResult _evaluateRecursive<T>(Trace<T> trace, Formula<T> formula, int i
       }
 
       // Loop finished: Right never held within the interval I
-      return EvaluationResult.failure('UntilTimed failed: Right operand never held within interval ${f.interval}.',
-          relatedIndex: index, relatedTimestamp: currentIndexTimestamp);
+      return EvaluationResult.failure(
+          'UntilTimed failed: Right operand never held within interval ${f.interval}.',
+          relatedIndex: index,
+          relatedTimestamp: currentIndexTimestamp);
 
     case ReleaseTimed<T> f: // left R_I right
       // Evaluate !(!left U_I !right)
@@ -460,7 +491,8 @@ EvaluationResult _evaluateRecursive<T>(Trace<T> trace, Formula<T> formula, int i
     default:
       // Potentially handle LTL operators here if not done above
       // Or throw an error for unsupported types
-      return EvaluationResult.failure('Unsupported formula type encountered: ${formula.runtimeType}');
+      return EvaluationResult.failure(
+          'Unsupported formula type encountered: ${formula.runtimeType}');
   }
 }
 
@@ -492,7 +524,7 @@ bool checkEventuallyWithin<S>(
       }
     }
     // Optimization: If current time is already past the upper bound
-    if (timeOffset > interval.upperBound) {
+    if (interval.exceedsUpperBound(timeOffset)) {
       break;
     }
   }
@@ -529,7 +561,7 @@ bool checkAlwaysWithin<S>(
       }
     }
     // Optimization: If current time is already past the upper bound
-    if (timeOffset > interval.upperBound) {
+    if (interval.exceedsUpperBound(timeOffset)) {
       break;
     }
   }
@@ -587,7 +619,7 @@ bool checkUntilWithin<S>(
     // Let's stick to checking all k. If we pass the interval without right holding within it,
     // the loop will finish, and we'll return false.
     // Optimization: If timeOffsetK > interval.upperBound, no *future* k can satisfy the interval condition.
-    if (timeOffsetK > interval.upperBound) {
+    if (interval.exceedsUpperBound(timeOffsetK)) {
       // We haven't found a k within the interval where right holds yet.
       break;
     }

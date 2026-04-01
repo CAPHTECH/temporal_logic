@@ -142,5 +142,46 @@ void main() {
         async.flushMicrotasks();
       });
     });
+
+    test('forwards non-monotonic timestamps as stream errors and closes', () {
+      fakeAsync((async) {
+        final formula = tlCore.eventually(
+          tlFlutter.state<TestState>((s) => s == TestState.target),
+        );
+        final checker = StreamMtlChecker<TestState>(
+          controller.stream,
+          formula: formula,
+        );
+
+        final holds = <bool>[];
+        final errors = <Object>[];
+        var isDone = false;
+
+        checker.resultStream.listen(
+          (result) => holds.add(result.holds),
+          onError: errors.add,
+          onDone: () => isDone = true,
+        );
+
+        async.flushMicrotasks();
+        expect(holds, [false],
+            reason: 'Initial evaluation on an empty trace should be false.');
+
+        controller.add(tv(TestState.initial, 100));
+        async.flushMicrotasks();
+        expect(holds, [false, false]);
+
+        controller.add(tv(TestState.target, 50));
+        async.flushMicrotasks();
+
+        expect(errors, hasLength(1));
+        expect(errors.single, isA<ArgumentError>());
+        expect(isDone, isTrue,
+            reason:
+                'The checker should close after reporting a malformed trace.');
+
+        checker.dispose();
+      });
+    });
   });
 }

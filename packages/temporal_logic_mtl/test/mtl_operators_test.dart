@@ -193,6 +193,37 @@ void main() {
     });
   });
 
+  group('Unbounded interval regressions', () {
+    final farFutureTrace = Trace([
+      TraceEvent(value: 'start', timestamp: Duration.zero),
+      TraceEvent(
+        value: 'late',
+        timestamp: const Duration(days: 365 * 150),
+      ),
+    ]);
+    final pLate = state<String>((s) => s == 'late', name: 'pLate');
+    final pStart = state<String>((s) => s == 'start', name: 'pStart');
+
+    test('TimeInterval.atLeast accepts large lower bounds', () {
+      final interval = TimeInterval.atLeast(const Duration(days: 365 * 150));
+
+      expect(interval.contains(const Duration(days: 365 * 151)), isTrue);
+    });
+
+    test('EventuallyTimed with always interval reaches far-future events', () {
+      final formula = EventuallyTimed(pLate, TimeInterval.always());
+
+      expect(evalM(farFutureTrace, formula).holds, isTrue);
+    });
+
+    test('AlwaysTimed with always interval still inspects far-future failures',
+        () {
+      final formula = AlwaysTimed(pStart, TimeInterval.always());
+
+      expect(evalM(farFutureTrace, formula).holds, isFalse);
+    });
+  });
+
   group('UntilTimed edge cases', () {
     test('neither condition holds', () {
       // pFalse U_[0,1000ms] pFalse -> both false, fails

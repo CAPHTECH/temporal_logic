@@ -264,5 +264,41 @@ void main() {
         sub.cancel(); // Technically sub is already cancelled by dispose
       });
     });
+
+    test('forwards evaluation errors to the result stream and closes', () {
+      fakeAsync((async) {
+        formula = AtomicProposition<TestState>(
+          (_) => throw StateError('predicate failed'),
+          name: 'throws',
+        );
+        checker = StreamLtlChecker<TestState>(
+          stream: controller.stream,
+          formula: formula,
+        );
+
+        final results = <bool>[];
+        final errors = <Object>[];
+        var isDone = false;
+
+        checker.resultStream.listen(
+          results.add,
+          onError: errors.add,
+          onDone: () => isDone = true,
+        );
+
+        async.flushMicrotasks();
+        expect(results, [false],
+            reason: 'Initial evaluation on an empty trace still succeeds.');
+
+        controller.add(TestState(true));
+        async.flushMicrotasks();
+
+        expect(errors, hasLength(1));
+        expect(errors.single, isA<StateError>());
+        expect(isDone, isTrue,
+            reason:
+                'The checker should close after surfacing an evaluation error.');
+      });
+    });
   });
 }

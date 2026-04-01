@@ -44,14 +44,27 @@ class StreamMtlChecker<S> {
       _internalTraceEvents.add(TraceEvent(
           timestamp: _initialValue.timestamp, value: _initialValue.value));
     }
-    // Evaluate the initial state based on _initialValue (if any)
-    final initialResult = _evaluate();
+    Object? initialError;
+    StackTrace? initialStackTrace;
+    EvaluationResult? initialResult;
+
+    try {
+      initialResult = _evaluate();
+    } catch (error, stackTrace) {
+      initialError = error;
+      initialStackTrace = stackTrace;
+    }
+
     // Start listening *after* initial state is determined
     _startListening();
     // Schedule the emission of the initial result for the next event loop cycle
     scheduleMicrotask(() {
       if (!_resultController.isClosed) {
-        _resultController.add(initialResult);
+        if (initialError != null) {
+          _publishErrorAndClose(initialError!, initialStackTrace);
+          return;
+        }
+        _resultController.add(initialResult!);
       }
     });
   }
@@ -63,21 +76,30 @@ class StreamMtlChecker<S> {
         // Convert TimedValue to TraceEvent
         _internalTraceEvents.add(TraceEvent(
             timestamp: timedValue.timestamp, value: timedValue.value));
-        // Simple approach: re-evaluate on every new event.
-        _evaluateAndNotify();
+        try {
+          _evaluateAndNotify();
+        } catch (error, stackTrace) {
+          _publishErrorAndClose(error, stackTrace);
+        }
       },
       onDone: () {
         if (!_resultController.isClosed) {
           _resultController.close(); // Close after potential last emit
         }
       },
-      onError: (error) {
-        if (!_resultController.isClosed) {
-          _resultController.addError(error);
-          _resultController.close();
-        }
+      onError: (error, stackTrace) {
+        _publishErrorAndClose(error, stackTrace);
       },
     );
+  }
+
+  void _publishErrorAndClose(Object error, [StackTrace? stackTrace]) {
+    _subscription?.cancel();
+    if (_resultController.isClosed) {
+      return;
+    }
+    _resultController.addError(error, stackTrace);
+    _resultController.close();
   }
 
   void _evaluateAndNotify() {

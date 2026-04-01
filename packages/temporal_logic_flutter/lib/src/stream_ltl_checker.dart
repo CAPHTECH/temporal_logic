@@ -65,14 +65,27 @@ class StreamLtlChecker<S> {
     if (_initialValue != null) {
       _trace.add(_initialValue);
     }
-    // Evaluate the initial state (empty or with initialValue)
-    final initialResult = check();
+    Object? initialError;
+    StackTrace? initialStackTrace;
+    bool? initialResult;
+
+    try {
+      initialResult = check();
+    } catch (error, stackTrace) {
+      initialError = error;
+      initialStackTrace = stackTrace;
+    }
+
     // Start listening *after* initial state is determined
     _startListening();
     // Schedule the emission of the initial result for the next event loop cycle
     scheduleMicrotask(() {
       if (!_resultController.isClosed) {
-        _resultController.add(initialResult);
+        if (initialError != null) {
+          _publishErrorAndClose(initialError!, initialStackTrace);
+          return;
+        }
+        _resultController.add(initialResult!);
       }
     });
   }
@@ -86,8 +99,11 @@ class StreamLtlChecker<S> {
     _subscription = _stream.listen(
       (newState) {
         _trace.add(newState);
-        // Evaluate and emit on every new state.
-        _evaluateAndNotify();
+        try {
+          _evaluateAndNotify();
+        } catch (error, stackTrace) {
+          _publishErrorAndClose(error, stackTrace);
+        }
       },
       onDone: () {
         // Close the controller when the input stream is done.
@@ -103,6 +119,15 @@ class StreamLtlChecker<S> {
         }
       },
     );
+  }
+
+  void _publishErrorAndClose(Object error, [StackTrace? stackTrace]) {
+    _subscription?.cancel();
+    if (_resultController.isClosed) {
+      return;
+    }
+    _resultController.addError(error, stackTrace);
+    _resultController.close();
   }
 
   // Helper function to evaluate and emit result if necessary
