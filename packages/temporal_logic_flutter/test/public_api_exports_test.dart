@@ -6,10 +6,13 @@ import 'package:temporal_logic_flutter/temporal_logic_flutter.dart'
         LtlCheckerWidget,
         MtlCheckerWidget,
         ReleaseTimed,
+        SustainedStateCheckerWidget,
         StreamEvaluationStart,
         StreamLtlChecker,
         StreamMtlChecker,
+        StreamSustainedStateChecker,
         TimeInterval,
+        TraceRecorder,
         WeakUntilTimed,
         evaluateMtlTrace,
         state;
@@ -39,8 +42,11 @@ void main() {
     );
     final checkerType = StreamLtlChecker<_ExportTestState>;
     final mtlCheckerType = StreamMtlChecker<_ExportTestState>;
+    final sustainedCheckerType = StreamSustainedStateChecker<_ExportTestState>;
     final widgetType = LtlCheckerWidget<_ExportTestState>;
     final mtlWidgetType = MtlCheckerWidget<_ExportTestState>;
+    final sustainedWidgetType = SustainedStateCheckerWidget<_ExportTestState>;
+    final recorderType = TraceRecorder<_ExportTestState>;
     final evaluationStart = StreamEvaluationStart.current;
     final status = CheckStatus.success;
     final matcher = satisfiesLtl<_ExportTestState>(ltlFormula);
@@ -52,8 +58,11 @@ void main() {
     expect(weakUntilFormula, isA<WeakUntilTimed<_ExportTestState>>());
     expect(checkerType, isA<Type>());
     expect(mtlCheckerType, isA<Type>());
+    expect(sustainedCheckerType, isA<Type>());
     expect(widgetType, isA<Type>());
     expect(mtlWidgetType, isA<Type>());
+    expect(sustainedWidgetType, isA<Type>());
+    expect(recorderType, isA<Type>());
     expect(evaluationStart, StreamEvaluationStart.current);
     expect(status, CheckStatus.success);
     expect(matcher, isNotNull);

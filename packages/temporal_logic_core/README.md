@@ -4,70 +4,52 @@
 <!-- [![pub package](https://img.shields.io/pub/v/temporal_logic_core.svg)](https://pub.dev/packages/temporal_logic_core) -->
 <!-- [![Build Status](...)](...) -->
 
-This package provides the core data structures, interfaces, and evaluation logic for propositional logic and Linear Temporal Logic (LTL). It forms the foundation for other temporal logic packages in this repository.
+`temporal_logic_core` は、命題論理と Linear Temporal Logic (LTL) の共通基盤を提供します。
+AST、Trace、評価結果、そして `evaluateTrace` / `evaluateLtl` の入口をまとめて公開します。
 
 ## Features
 
-* **Abstract Syntax Tree (AST):** Defines classes like `Formula`, `AtomicProposition`, `And`, `Or`, `Not`, `Implies` for basic logical connectives, and LTL operators like `Next`, `Always` (Globally), `Eventually` (Finally), `Until`, `WeakUntil`, and `Release`.
-* **Timed Traces:** Represents sequences of events or states using `Trace` and `TraceEvent`, incorporating `Duration` timestamps.
-* **LTL Evaluation:** Provides the `evaluateTrace` function to check if a `Trace` satisfies a given LTL `Formula`.
-* **Evaluation Results:** Returns detailed `EvaluationResult` objects, indicating success or failure with optional reasons and timestamps/indices.
-* **Formula Building:** Includes basic helpers like the `LogicalConnectives` extension (`and`, `or`, `implies`, `not`).
+* **AST**: `Formula`, `AtomicProposition`, `Not`, `And`, `Or`, `Implies`, `Next`, `Always`, `Eventually`, `Until`, `WeakUntil`, `Release`
+* **Trace model**: `Trace`, `TraceEvent`, `TimedValue`
+* **Evaluation**: `evaluateTrace` による trace ベースの評価と、`evaluateLtl` による簡易 LTL 評価
+* **Result details**: `EvaluationResult` に `holds`, `reason`, `relatedIndex`, `relatedTimestamp` を保持
+* **Builder DSL**: `state`, `event`, `next`, `always`, `eventually`, `until`, `weakUntil`, `release`
 
 ## Getting Started
 
-Add this package to your `pubspec.yaml` dependencies:
+`pubspec.yaml` に追加します。
 
 ```yaml
 dependencies:
-  temporal_logic_core: ^0.1.0 # Use the latest version from pub.dev
+  temporal_logic_core: ^0.1.0
 ```
 
-Then run `flutter pub get` or `dart pub get`.
+その後 `flutter pub get` または `dart pub get` を実行します。
 
 ## Usage
-
-Here's a basic example of defining an LTL formula and evaluating it on a simple trace:
 
 ```dart
 import 'package:temporal_logic_core/temporal_logic_core.dart';
 
 void main() {
-  // Define atomic propositions using builder functions
-  // state<T>(predicate, {name}) creates an AtomicProposition<T>
   final isPositive = state<int>((s) => s > 0, name: 'isPositive');
   final isEven = state<int>((s) => s % 2 == 0, name: 'isEven');
-
-  // Build an LTL formula using builder functions and extension methods:
-  // "Always (Globally), if a state is positive, it must also be even."
-  // G (isPositive -> isEven)
   final formula = always(isPositive.implies(isEven));
 
-  // You could also write:
-  // final formula = always(implies(isPositive, isEven));
-  // Or using constructors directly:
-  // final formula = Always(Implies(isPositive, isEven));
+  final trace = Trace.fromList([2, 4, 6, 7, 8]);
+  final result = evaluateTrace(trace, formula);
 
-  // Create a trace from a list (timestamps are assigned automatically: 0ms, 1ms, ...)
-  final trace1 = Trace.fromList([2, 4, 6, 8]); // All positive numbers are even
-  final trace2 = Trace.fromList([2, 4, 5, 8]); // Contains 5 (positive but not even)
-
-  // Evaluate the formula on the traces
-  final result1 = evaluateTrace(trace1, formula);
-  final result2 = evaluateTrace(trace2, formula);
-
-  print('Trace 1 satisfies "$formula": ${result1.holds}'); // Output: true
-  print('Trace 2 satisfies "$formula": ${result2.holds}'); // Output: false
-  print('Reason for Trace 2 failure: ${result2.reason}');
-  // Example Output: Reason for Trace 2 failure: Always failed: Antecedent held but consequent failed: isEven failed at index 2
+  print(result.holds);
+  print(result.reason);
+  print(result.relatedIndex);
+  print(result.relatedTimestamp);
 }
-
 ```
 
-## Additional Information
+`Trace.fromList` は順序に基づいて trace を作るときに便利です。timestamp を明示したい場合は `Trace([TraceEvent(...), ...])` を使います。
 
-* **Formula Construction:** You can build formulas using:
-  * Direct constructors (e.g., `Always(...)`, `Implies(...)`).
-  * Builder functions (e.g., `always(...)`, `implies(...)`, `state(...)`).
-  * Extension methods for common binary operators (`and`, `or`, `implies`).
-* **Traces:** The `Trace` class assumes monotonically non-decreasing timestamps. You can create traces with explicit `Duration` timestamps using `
+## Notes
+
+* `evaluateTrace` は trace 上の本体の評価入口です。
+* `evaluateLtl` は「状態列だけを見たい」場合の補助関数です。
+* `EvaluationResult` は public API として再公開されています。

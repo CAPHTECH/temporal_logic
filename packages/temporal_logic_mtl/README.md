@@ -4,88 +4,64 @@
 <!-- [![pub package](https://img.shields.io/pub/v/temporal_logic_mtl.svg)](https://pub.dev/packages/temporal_logic_mtl) -->
 <!-- [![Build Status](...)](...) -->
 
-This package provides support for **Metric Temporal Logic (MTL)**, allowing you to specify and evaluate properties of timed sequences (traces) with quantitative time constraints.
-
-It builds upon the foundation laid by the `temporal_logic_core` package.
+`temporal_logic_mtl` は `temporal_logic_core` の上に Metric Temporal Logic (MTL) を追加します。
+時間区間つきの演算子と、`Trace<T>` に対する `evaluateMtlTrace` を公開します。
 
 ## Features
 
-*   **Time Intervals:** Define precise time bounds using the `TimeInterval` class (e.g., `TimeInterval(Duration(seconds: 2), Duration(seconds: 5))`). Includes helpers like `TimeInterval.exactly()`, `TimeInterval.upTo()`, `TimeInterval.atLeast()`.
-*   **MTL Operators:** Introduces timed versions of standard temporal operators:
-    *   `EventuallyTimed` (F<sub>I</sub>): Asserts that a property holds *eventually* within a specific time interval `I`.
-    *   `AlwaysTimed` (G<sub>I</sub>): Asserts that a property holds *always* throughout a specific time interval `I`.
-    *   `UntilTimed` (U<sub>I</sub>): Asserts that one property holds *until* another becomes true, with the transition occurring within a time interval `I`.
-*   **Unified Evaluation:** Provides the `evaluateMtlTrace` function which can evaluate both standard LTL formulas (from `temporal_logic_core`) and MTL formulas against a timed `Trace`.
+* **Time intervals**: `TimeInterval`, `TimeInterval.exactly`, `TimeInterval.upTo`, `TimeInterval.atLeast`, `TimeInterval.always`
+* **Timed operators**: `EventuallyTimed`, `AlwaysTimed`, `UntilTimed`, `ReleaseTimed`, `WeakUntilTimed`
+* **Unified evaluation**: `evaluateMtlTrace` は MTL だけでなく、pure LTL の `Formula` も評価できます
+* **Core re-exports**: `Formula`, `Trace`, `TraceEvent`, `TimedValue`, `EvaluationResult`, LTL の builder DSL も再公開します
 
 ## Getting Started
 
-Add this package along with `temporal_logic_core` to your `pubspec.yaml` dependencies:
+`pubspec.yaml` に `temporal_logic_core` と `temporal_logic_mtl` を追加します。
 
 ```yaml
 dependencies:
-  temporal_logic_core: ^0.1.0 # Or latest version
-  temporal_logic_mtl: ^0.1.0 # Use the latest version from pub.dev
+  temporal_logic_core: ^0.1.0
+  temporal_logic_mtl: ^0.1.0
 ```
 
-Then run `flutter pub get` or `dart pub get`.
+その後 `flutter pub get` または `dart pub get` を実行します。
 
 ## Usage
-
-Here's an example of defining an MTL specification and evaluating it:
 
 ```dart
 import 'package:temporal_logic_core/temporal_logic_core.dart';
 import 'package:temporal_logic_mtl/temporal_logic_mtl.dart';
 
 void main() {
-  // Define propositions
   final request = state<String>((s) => s == 'request', name: 'request');
   final response = state<String>((s) => s == 'response', name: 'response');
 
-  // Define an MTL formula: Always, if a request occurs,
-  // then a response must occur within 3 to 5 time units (inclusive).
-  // G (request -> F_[3ms, 5ms](response))
   final spec = always(
     request.implies(
       EventuallyTimed(
         response,
-        TimeInterval(Duration(milliseconds: 3), Duration(milliseconds: 5)),
+        TimeInterval(
+          const Duration(milliseconds: 3),
+          const Duration(milliseconds: 5),
+        ),
       ),
     ),
   );
 
-  // Create a trace with explicit timestamps
-  final trace1 = Trace([
-    TraceEvent(timestamp: Duration(milliseconds: 0), value: 'idle'),
-    TraceEvent(timestamp: Duration(milliseconds: 1), value: 'request'), // Request at 1ms
-    TraceEvent(timestamp: Duration(milliseconds: 2), value: 'processing'),
-    TraceEvent(timestamp: Duration(milliseconds: 5), value: 'response'), // Response at 5ms (5-1 = 4ms, which is in [3, 5])
-    TraceEvent(timestamp: Duration(milliseconds: 6), value: 'idle'),
+  final trace = Trace([
+    TraceEvent(timestamp: const Duration(milliseconds: 0), value: 'idle'),
+    TraceEvent(timestamp: const Duration(milliseconds: 1), value: 'request'),
+    TraceEvent(timestamp: const Duration(milliseconds: 4), value: 'response'),
   ]);
 
-  final trace2 = Trace([
-    TraceEvent(timestamp: Duration(milliseconds: 0), value: 'idle'),
-    TraceEvent(timestamp: Duration(milliseconds: 1), value: 'request'), // Request at 1ms
-    TraceEvent(timestamp: Duration(milliseconds: 2), value: 'processing'),
-    TraceEvent(timestamp: Duration(milliseconds: 7), value: 'response'), // Response at 7ms (7-1 = 6ms, which is NOT in [3, 5])
-    TraceEvent(timestamp: Duration(milliseconds: 8), value: 'idle'),
-  ]);
-
-  // Evaluate using evaluateMtlTrace
-  final result1 = evaluateMtlTrace(trace1, spec);
-  final result2 = evaluateMtlTrace(trace2, spec);
-
-  print('Trace 1 satisfies "$spec": ${result1.holds}'); // Output: true
-  print('Trace 2 satisfies "$spec": ${result2.holds}'); // Output: false
-  print('Reason for Trace 2 failure: ${result2.reason}');
-  // Example output might be related to the F_[3ms, 5ms](response) part failing at index 1
+  final result = evaluateMtlTrace(trace, spec);
+  print(result.holds);
+  print(result.reason);
 }
 ```
 
-## Additional Information
+## Notes
 
-*   **Evaluation Semantics:** The evaluation follows standard MTL semantics over timed traces.
-*   **LTL Compatibility:** `evaluateMtlTrace` can also evaluate standard LTL formulas from `temporal_logic_core`. If an LTL formula is provided, it effectively ignores the precise timestamps and operates based on the sequence ordering (similar to `evaluateLtl`).
-*   **Infinite Intervals:** Intervals like `[t, inf)` created with `TimeInterval.atLeast()` use a large finite duration internally. True handling of infinite intervals might be added in future versions.
-
-See the `examples/snackbar_mtl` directory in the main repository for a Flutter-specific usage scenario. 
+* `evaluateMtlTrace` は timed trace を前提に評価します。
+* pure LTL の `Formula` を渡した場合も、そのまま評価できます。
+* 旧来の `checkEventuallyWithin` などの互換ヘルパーは内部の非推奨レイヤーに残していますが、main の公開入口ではありません。

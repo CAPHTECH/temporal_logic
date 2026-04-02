@@ -2,18 +2,32 @@ import 'package:temporal_logic_core/temporal_logic_core.dart';
 
 import 'time_interval.dart';
 
-/// [DEPRECATED: Use evaluateMtlTrace] Checks if the formula [operand] holds eventually within the [interval]
-/// for the given timed [trace].
+/// Legacy compatibility helpers for the historical MTL API.
 ///
-/// Checks if operand [phi] becomes true at some point within the [interval]
-/// relative to the start of the [trace]. (F_I phi)
+/// Prefer [evaluateMtlTrace] with timed formulas from [mtl_operators.dart].
+/// These helpers remain only so older call sites continue to work without a
+/// breaking change.
+///
+/// They intentionally keep the original interval-scanning semantics and are
+/// not the primary path for new code.
+
+Duration? _traceStartTime<S>(Trace<S> trace) {
+  if (trace.isEmpty) {
+    return null;
+  }
+  return trace.events.first.timestamp;
+}
+
+/// [DEPRECATED: Use evaluateMtlTrace with EventuallyTimed formula]
+/// Checks if [operand] holds eventually within [interval] for the given
+/// timed [trace].
 @Deprecated('Use evaluateMtlTrace with EventuallyTimed formula')
 bool checkEventuallyWithin<S>(
     Trace<S> trace, TimeInterval interval, AtomicProposition<S> operand) {
-  if (trace.isEmpty) {
+  final startTime = _traceStartTime(trace);
+  if (startTime == null) {
     return false;
   }
-  final startTime = trace.events.first.timestamp;
 
   for (var i = 0; i < trace.length; i++) {
     final currentTime = trace.events[i].timestamp;
@@ -30,15 +44,16 @@ bool checkEventuallyWithin<S>(
   return false;
 }
 
-/// [DEPRECATED: Use evaluateMtlTrace] Checks if operand [phi] holds true at all points within the [interval]
-/// relative to the start of the [trace]. (G_I phi)
+/// [DEPRECATED: Use evaluateMtlTrace with AlwaysTimed formula]
+/// Checks if [operand] holds at all points within [interval] for the given
+/// timed [trace].
 @Deprecated('Use evaluateMtlTrace with AlwaysTimed formula')
 bool checkAlwaysWithin<S>(
     Trace<S> trace, TimeInterval interval, AtomicProposition<S> operand) {
-  if (trace.isEmpty) {
+  final startTime = _traceStartTime(trace);
+  if (startTime == null) {
     return true;
   }
-  final startTime = trace.events.first.timestamp;
 
   for (var i = 0; i < trace.length; i++) {
     final currentEvent = trace.events[i];
@@ -55,20 +70,15 @@ bool checkAlwaysWithin<S>(
   return true;
 }
 
-/// [DEPRECATED: Use evaluateMtlTrace] Checks if [left] holds true until [right] becomes true within the [interval]
-/// relative to the start of the [trace]. (phi U_I psi)
-///
-/// Semantics: Exists time `t` in `interval` such that `right` holds at `t`,
-/// AND for all times `t'` from start (0) up to `t`, `left` holds at `t'`.
-/// Note: The interval applies ONLY to the point where `right` must hold.
-/// The `left` condition applies from the beginning of the trace up to that point.
+/// [DEPRECATED: Use evaluateMtlTrace with UntilTimed formula]
+/// Checks if [left] holds until [right] becomes true within [interval].
 @Deprecated('Use evaluateMtlTrace with UntilTimed formula')
 bool checkUntilWithin<S>(Trace<S> trace, TimeInterval interval,
     AtomicProposition<S> left, AtomicProposition<S> right) {
-  if (trace.isEmpty) {
+  final startTime = _traceStartTime(trace);
+  if (startTime == null) {
     return false;
   }
-  final startTime = trace.events.first.timestamp;
 
   for (var k = 0; k < trace.length; k++) {
     final timeOffsetK = trace.events[k].timestamp - startTime;
