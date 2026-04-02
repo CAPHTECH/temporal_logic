@@ -8,6 +8,7 @@
 - `mise exec -- flutter pub publish --dry-run` in `packages/temporal_logic_core`
 - `mise exec -- flutter pub publish --dry-run` in `packages/temporal_logic_mtl`
 - `mise exec -- flutter pub publish --dry-run` in `packages/temporal_logic_flutter`
+- `/Users/rizumita/.local/share/mise/installs/flutter/3.41.5-stable/bin/flutter pub publish --dry-run` in a temporary clean copy of `packages/temporal_logic_flutter`
 
 ## Results
 
@@ -25,14 +26,15 @@
 
 ### `temporal_logic_flutter`
 
-- Dry-run failed with 3 package validation errors.
-- Errors reported by pub:
-  - `lib/src/stream_trace_checker_base.dart` imports `package:meta/meta.dart`, but `meta` is not declared in `dependencies`.
-  - `lib/src/formula_stream_checker_base.dart` imports `package:meta/meta.dart`, but `meta` is not declared in `dependencies`.
-  - `lib/src/matchers.dart` imports `package:flutter_test/flutter_test.dart`, but `flutter_test` is only in `dev_dependencies`.
-- Pub ended with: `Sorry, your package is missing some requirements and can't be published yet.`
+- Package-level publish blockers were resolved.
+- Direct dry-run in the working tree reported one warning because the package files were modified in git:
+  - `lib/src/matchers.dart`
+  - `pubspec.yaml`
+- Dry-run in a temporary clean copy completed successfully.
+- Pub reported `Package has 0 warnings.` for the clean-copy validation run.
 
 ## Notes
 
 - `temporal_logic_core` and `temporal_logic_mtl` are publish-ready from the dry-run perspective.
-- `temporal_logic_flutter` is not publish-ready yet because its library code depends on packages that are not declared for publication.
+- `temporal_logic_flutter` is also publish-ready from the dry-run perspective after adding `meta` and `matcher` to `dependencies` and removing the `flutter_test` import from library code.
+- The working-tree warning for `temporal_logic_flutter` disappears once the current changes are committed.

@@ -1,4 +1,4 @@
-import 'package:flutter_test/flutter_test.dart';
+import 'package:matcher/matcher.dart';
 import 'package:temporal_logic_core/temporal_logic_core.dart';
 
 /// A matcher that checks if a [Trace] satisfies a given [Formula].

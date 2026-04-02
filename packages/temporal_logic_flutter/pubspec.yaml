@@ -17,6 +17,8 @@ dependencies:
   temporal_logic_mtl: ^0.3.0
   collection: ^1.18.0
   clock: ^1.1.1 # Add clock package
+  matcher: ^0.12.17
+  meta: ^1.16.0
 
 # Add other dependencies here
 
