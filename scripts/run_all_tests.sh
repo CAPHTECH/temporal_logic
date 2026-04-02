@@ -7,6 +7,10 @@ if ! command -v mise >/dev/null 2>&1; then
   exit 1
 fi
 
+echo "=== Checking Public Boundaries ==="
+bash "$(dirname "$0")/check_cross_package_src_imports.sh"
+echo ""
+
 # Function to run tests in a directory if a 'test' subdirectory exists
 run_tests_if_present() {
   dir=$1

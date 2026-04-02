@@ -1,4 +1,4 @@
-## Unreleased
+## 0.1.1
 
 * **API**: `temporal_logic_core.dart` を stable public entry point として明文化しました。
 * **TEST**: 公開 export の回帰を固定する `public_api_exports_test.dart` を追加しました。

@@ -1,5 +1,5 @@
 import 'package:temporal_logic_core/temporal_logic_core.dart';
-import 'package:temporal_logic_core/src/evaluator_common.dart';
+import 'package:temporal_logic_core/internal/evaluator_common.dart';
 
 import 'mtl_ast.dart';
 

@@ -1,4 +1,4 @@
-## Unreleased
+## 0.1.2
 
 * **API**: `temporal_logic_flutter.dart` と `temporal_logic_flutter_test.dart` を正規の入口として明文化しました。
 * **TEST**: 公開 export の回帰テストを拡張し、widget・checker・trace recorder を stable surface として固定しました。

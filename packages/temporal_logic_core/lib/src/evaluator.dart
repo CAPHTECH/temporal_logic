@@ -1,6 +1,6 @@
 import 'ast.dart';
 import 'evaluation_result.dart';
-import 'evaluator_common.dart';
+import '../internal/evaluator_common.dart';
 import 'timed_value.dart';
 
 /// Evaluates a temporal logic [formula] against a given timed [trace]

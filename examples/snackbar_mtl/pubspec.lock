@@ -198,21 +198,21 @@ packages:
       path: "../../packages/temporal_logic_core"
       relative: true
     source: path
-    version: "0.1.0"
+    version: "0.1.1"
   temporal_logic_flutter:
     dependency: "direct main"
     description:
       path: "../../packages/temporal_logic_flutter"
       relative: true
     source: path
-    version: "0.1.1"
+    version: "0.1.2"
   temporal_logic_mtl:
     dependency: "direct overridden"
     description:
       path: "../../packages/temporal_logic_mtl"
       relative: true
     source: path
-    version: "0.2.0"
+    version: "0.3.0"
   term_glyph:
     dependency: transitive
     description:

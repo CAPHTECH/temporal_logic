@@ -1,6 +1,6 @@
 name: temporal_logic_flutter
 description: Flutter integration (TraceRecorder, Matchers) for temporal logic.
-version: 0.1.1
+version: 0.1.2
 homepage: https://github.com/CAPHTECH/temporal_logic/tree/main/packages/temporal_logic_flutter
 repository: https://github.com/CAPHTECH/temporal_logic
 
@@ -12,9 +12,9 @@ dependencies:
   flutter:
     sdk: flutter
   # Use path dependency to align with examples
-  temporal_logic_core: ^0.1.0
+  temporal_logic_core: ^0.1.1
   # Use path dependency for mtl as well if needed by this package
-  temporal_logic_mtl: ^0.2.0
+  temporal_logic_mtl: ^0.3.0
   collection: ^1.18.0
   clock: ^1.1.1 # Add clock package
 
