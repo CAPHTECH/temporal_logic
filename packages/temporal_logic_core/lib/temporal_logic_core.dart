@@ -9,6 +9,9 @@ export 'src/builder.dart';
 // Export Timed Value and Trace classes
 export 'src/timed_value.dart';
 
+// Export EvaluationResult as a stable public type.
+export 'src/evaluation_result.dart';
+
 // Export Evaluation Logic (evaluateTrace, EvaluationResult)
 export 'src/evaluator.dart';
 

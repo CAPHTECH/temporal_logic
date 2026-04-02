@@ -1,5 +1,5 @@
 import 'ast.dart';
-import 'evaluator.dart';
+import 'evaluation_result.dart';
 import 'timed_value.dart';
 
 typedef RecursiveFormulaEvaluator<T> = EvaluationResult Function(
@@ -43,16 +43,29 @@ EvaluationResult? evaluateCoreFormula<T>(
     case Or<T> f:
       final leftResult = evaluate(f.left, index);
       if (leftResult.holds) {
-        return leftResult;
+        return const EvaluationResult.success();
       }
-      return evaluate(f.right, index);
+      final rightResult = evaluate(f.right, index);
+      if (rightResult.holds) {
+        return const EvaluationResult.success();
+      }
+      return EvaluationResult.failure(
+          'Both sides of OR failed (${leftResult.reason ?? 'Left'}, ${rightResult.reason ?? 'Right'})',
+          relatedIndex: index);
 
     case Implies<T> f:
       final leftResult = evaluate(f.left, index);
       if (!leftResult.holds) {
         return const EvaluationResult.success();
       }
-      return evaluate(f.right, index);
+      final rightResult = evaluate(f.right, index);
+      if (!rightResult.holds) {
+        return EvaluationResult.failure(
+            'Antecedent held but consequent failed: ${rightResult.reason ?? "Consequent eval failed"}',
+            relatedIndex: rightResult.relatedIndex,
+            relatedTimestamp: rightResult.relatedTimestamp);
+      }
+      return const EvaluationResult.success();
 
     case Next<T> f:
       final nextIndex = index + 1;
@@ -87,9 +100,7 @@ EvaluationResult? evaluateCoreFormula<T>(
         }
       }
       return EvaluationResult.failure('Eventually failed: Operand never held.',
-          relatedIndex: index,
-          relatedTimestamp:
-              trace.events.isNotEmpty ? trace.events[index].timestamp : null);
+          relatedIndex: index);
 
     case Until<T> f:
       if (index >= trace.length) {
@@ -120,9 +131,7 @@ EvaluationResult? evaluateCoreFormula<T>(
         }
       }
       return EvaluationResult.failure('Until failed: Right operand never held.',
-          relatedIndex: index,
-          relatedTimestamp:
-              trace.events.isNotEmpty ? trace.events[index].timestamp : null);
+          relatedIndex: index);
 
     case WeakUntil<T> f:
       return evaluate(
