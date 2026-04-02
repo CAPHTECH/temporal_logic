@@ -20,8 +20,8 @@
 
 ```yaml
 dependencies:
-  temporal_logic_core: ^0.1.0
-  temporal_logic_mtl: ^0.1.0
+  temporal_logic_core: ^0.1.1
+  temporal_logic_mtl: ^0.3.0
 ```
 
 その後 `flutter pub get` または `dart pub get` を実行します。

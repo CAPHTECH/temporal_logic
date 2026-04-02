@@ -26,11 +26,11 @@
       - [ヘルパー関数(`state`， `event`)](#ヘルパー関数state-event)
     - [`temporal_logic_mtl` API](#temporal_logic_mtl-api)
       - [TimeInterval](#timeinterval)
-      - [タイムド演算子 (`alwaysTimed`， `eventuallyTimed`)](#タイムド演算子-alwaystimed-eventuallytimed)
+      - [タイムド式 (`EventuallyTimed`， `AlwaysTimed` など)](#タイムド式-eventuallytimed-alwaystimed-など)
       - [評価 (`evaluateMtlTrace`)](#評価-evaluatemtltrace)
     - [`temporal_logic_flutter` API](#temporal_logic_flutter-api)
       - [TraceRecorder](#tracerecorder)
-      - [マッチャー (`satisfiesLtl`)](#マッチャー-satisfiesltl)
+      - [Flutter 用テスト入口 (`temporal_logic_flutter_test.dart`)](#flutter-用テスト入口-temporal_logic_flutter_testdart)
   - [5. クックブック \& ベストプラクティス](#5-クックブック--ベストプラクティス)
     - [状態管理との統合 (Riverpod 例)](#状態管理との統合-riverpod-例)
     - [効果的な `AppSnap` タイプの設計](#効果的な-appsnap-タイプの設計)
@@ -67,7 +67,7 @@
 
 - **`packages/temporal_logic_core`**： 基礎的なインターフェース、LTL式構築、基本トレース構造。
 - **`packages/temporal_logic_mtl`**： MTLの実装、タイムドオペレーターとタイムドトレースの評価を追加。
-- **`packages/temporal_logic_flutter`**： Flutter固有の統合、状態シーケンスのキャプチャ用の`TraceRecorder`と`flutter_test`マッチャー(`satisfiesLtl`、`satisfiesMtl`)。
+- **`packages/temporal_logic_flutter`**： Flutter固有の統合。状態シーケンスを記録する `TraceRecorder` と、`satisfiesLtl` を使うための `temporal_logic_flutter_test.dart` を提供します。
 
 ### 初めての LTL テスト(ログインフロー例)
 
@@ -78,7 +78,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:login_flow_ltl_example/main.dart'; // あなたのアプリ
 import 'package:temporal_logic_core/temporal_logic_core.dart';
-import 'package:temporal_logic_flutter/temporal_logic_flutter.dart';
+import 'package:temporal_logic_flutter/temporal_logic_flutter_test.dart';
 
 // 検証対象のアプリケーション状態のスナップショットを表します。
 // 不変で、==/hashCode を実装する必要があります。
@@ -162,7 +162,7 @@ void main() {
     // 7. 検証： 記録されたAppSnapsのシーケンス(トレース)が式を満たすかどうかを確認する。
     final trace = recorder.trace;
     // temporal_logic_flutter からカスタムマッチャーを使用
-    expect(trace, satisfiesLtl(formula)); // または satisfiesMtl
+    expect(trace, satisfiesLtl(formula));
   });
 }
 ```
@@ -234,10 +234,11 @@ LTLは、トレース内の状態の線形シーケンスに沿って性質を�
 
 MTL は LTL に明示的な時間制約を時制演算子に追加し、物事が*どのくらいの時間*かかるかを推論できるようにします。`temporal_logic_mtl` によって提供されます。
 
-- **`TimeInterval(Duration start， Duration end， ｛bool startInclusive， bool endInclusive｝)`**： 現在の状態のタイムスタンプを基準とした正確な時間窓を定義します。
-- **`alwaysTimed(formula， TimeInterval interval)` (G[a，b])**： 「`formula` は、現在の時刻から指定された `interval` 内のタイムスタンプを持つすべての将来の状態において真でなければならない。」(例：「次の5秒間、エラーフラグはfalseでなければならない」)
-- **`eventuallyTimed(formula， TimeInterval interval)` (F[a，b])**： 「`formula` は、現在の時刻から指定された `interval` 内のタイムスタンプを持つ将来の状態で真になる必要があります。」 (例： 「2秒以内に成功メッセージが表示される必要があります」)。
-- 評価には意味のあるタイムスタンプを持つ`Trace`(通常は`TraceRecorder`によって自動的に処理される)が必要であり、`evaluateMtlTrace`関数を使用します。
+- **`TimeInterval(Duration start， Duration end， ｛bool startInclusive， bool endInclusive｝)`**： 現在の状態のタイムスタンプを基準とした正確な時間区間を定義します。
+- **`AlwaysTimed(formula， interval)` (G[a，b])**： 「`formula` は、現在の時刻から指定された `interval` の範囲に入るすべての将来状態で真でなければならない。」(例：「次の5秒間、エラーフラグは false のままでなければならない」)
+- **`EventuallyTimed(formula， interval)` (F[a，b])**： 「`formula` は、現在の時刻から指定された `interval` の範囲に入る将来状態のどこかで真にならなければならない。」(例：「2秒以内に成功メッセージが表示される必要がある」)
+- **`UntilTimed(left， right， interval)` / `ReleaseTimed(left， right， interval)` / `WeakUntilTimed(left， right， interval)`**： 時間境界つきで `until`、`release`、`weakUntil` を評価するためのクラスです。
+- 評価には意味のあるタイムスタンプを持つ `Trace` が必要で、通常は `TraceRecorder` がそれを記録し、評価には `evaluateMtlTrace` を使います。
 
 ## 4. API リファレンス
 
@@ -329,7 +330,7 @@ MTL は LTL に明示的な時間制約を時制演算子に追加し、物事�
 
 #### TimeInterval
 
-タイムド MTL 演算子(`alwaysTimed` や `eventuallyTimed` など)で使用される時間ウィンドウを定義するクラスです。現在の状態の評価時点のタイムスタンプを基準とした範囲を指定します。
+`AlwaysTimed`、`EventuallyTimed`、`UntilTimed`、`ReleaseTimed`、`WeakUntilTimed` などのタイムド式で使う時間区間を定義するクラスです。現在の状態の評価時点のタイムスタンプを基準とした範囲を指定します。
 
 - **コンストラクター：** `TimeInterval(Duration start， Duration end， ｛bool startInclusive = true， bool endInclusive = false｝)`
 - **`start`**： 区間の開始 `Duration`(現在の時刻に対する相対位置)。
@@ -342,19 +343,22 @@ MTL は LTL に明示的な時間制約を時制演算子に追加し、物事�
   - `TimeInterval(Duration(seconds： 2)， Duration(seconds： 10)， endInclusive： true)` は `[2s， 10s]` を表します - 2秒から10秒まで(10秒を含む)。
   - `TimeInterval(Duration(seconds： 1)， Duration(seconds： 1))` は単一の瞬間 `t = 1s` を表します(`startInclusive` が true で、`endInclusive` がデフォルトで false であるため)。
 
-#### タイムド演算子 (`alwaysTimed`， `eventuallyTimed`)
+#### タイムド式 (`EventuallyTimed`， `AlwaysTimed` など)
 
-これらの演算子は、LTL の対応する演算子(`always`、`eventually`)に `TimeInterval` 制約を追加して拡張します。
+これらのクラスは、LTL の考え方に `TimeInterval` による明示的な時間制約を加えます。
 
-- **`formula.alwaysTimed(interval)`** または `alwaysTimed(formula， interval)`：
+- **`AlwaysTimed(formula， interval)`**：
 - **シンボル：** G[`interval`] `formula`(例： G[0， 5s] `formula`)
   - **意味論： `formula` は、トレース内のタイムスタンプ `t_future` が `t_current + interval.start <= t_future < t_current + interval.end` を満たすすべての将来の状態において真でなければなりません(`interval` のフラグに基づいて包含性を調整します)。インターバル内に状態が存在しない場合、オペレーターは空虚に真です。
-  - **例：** `dataFetched.implies(loadingIndicatorVisible.not().alwaysTimed(TimeInterval(Duration.zero， Duration(seconds： 1))))` (データが取得された場合、取得後 0 秒から 1 秒までのインターバル全体において、ローディングインジケーターは *表示されてはならない*)。
+  - **例：** `dataFetched.implies(AlwaysTimed(loadingIndicatorVisible.not(), TimeInterval(Duration.zero, Duration(seconds: 1))))` (データが取得された場合、取得後 0 秒から 1 秒までの区間全体で、ローディングインジケーターは表示されてはならない)。
 
-- **`formula.eventuallyTimed(interval)`** または `eventuallyTimed(formula， interval)`：
+- **`EventuallyTimed(formula， interval)`**：
 - **シンボル：** F[`interval`] `formula` (例： F[2s， 5s] `formula`)
   - **意味： `formula` は、トレース内のタイムスタンプ `t_future` が `t_current + interval.start <= t_future < t_current + interval.end` を満たす *少なくとも1つの* 将来の状態において真でなければならない(包含性を考慮して調整)。インターバル内の状態が式を満たさない場合、またはインターバル内に状態が存在しない場合、オペレーターは偽となる。
-  - **例：** `requestSent.implies(responseReceived.eventuallyTimed(TimeInterval(Duration.zero， Duration(seconds： 3))))` (リクエストが送信された場合、3秒以内にレスポンスが受信されなければならない)。
+  - **例：** `requestSent.implies(EventuallyTimed(responseReceived, TimeInterval(Duration.zero, Duration(seconds: 3))))` (リクエストが送信された場合、3秒以内にレスポンスが受信されなければならない)。
+
+- **`UntilTimed(left， right， interval)` / `ReleaseTimed(left， right， interval)` / `WeakUntilTimed(left， right， interval)`**：
+  - **用途：** `until`、`release`、`weakUntil` の関係を、指定した時間区間の中で評価したいときに使います。
 
 #### 評価 (`evaluateMtlTrace`)
 
@@ -364,16 +368,16 @@ MTL は LTL に明示的な時間制約を時制演算子に追加し、物事�
 - **目的： 指定された `formula`(LTL と MTL 演算子を含む可能性あり)が、`trace` の状態 `startIndex` から評価を開始して真となるかどうかを評価します。
 - **パラメーター：
 - `trace`： 状態のスナップショットとタイムスタンプのシーケンスを含む `Trace<T>` オブジェクト。
-  - `formula`： 評価対象の `Formula<T>`(`alwaysTimed` や `eventuallyTimed` などのタイムド演算子を含む可能性あり)。
+  - `formula`： 評価対象の `Formula<T>`(`AlwaysTimed`、`EventuallyTimed`、`UntilTimed`、`ReleaseTimed`、`WeakUntilTimed` などのタイムド式を含む可能性があります)。
 - `startIndex`： 評価を開始するトレース内のインデックス。デフォルトは `0`(トレースの開始位置)。
 - **返り値：** `EvaluationResult` オブジェクト。
 - `bool holds`： `startIndex` から始まるトレースに対して式が成立する場合に `true`、そうでない場合に `false`。
 - `String？ reason`： `holds` が `false` の場合、式が失敗した理由を説明する文字列を含む可能性があります(例： どのサブ式がどのインデックスまたは時間で失敗したか)。テストの失敗をデバッグするのに役立ちます。
-- **使用方法： この関数を直接呼び出すこともできますが、Flutter テストでは通常、`temporal_logic_flutter` が提供する `satisfiesMtl` マッチャーを使用します。このマッチャーは内部でこの関数を呼び出します。
+- **使用方法：** MTL の検証では、この関数を直接呼び出します。`temporal_logic_flutter` には `satisfiesLtl` はありますが、`satisfiesMtl` はありません。
 
 ### `temporal_logic_flutter` API
 
-このパッケージは、主に `flutter_test` を使用して Flutter アプリケーションに時制論理テストを統合するためのユーティリティを提供します。
+このパッケージは、Flutter アプリケーションで時制論理を扱うためのユーティリティを提供します。実行時のヘルパーは `temporal_logic_flutter.dart`、テスト用の `satisfiesLtl` は `temporal_logic_flutter_test.dart` から利用します。
 
 #### TraceRecorder<T>
 
@@ -392,16 +396,17 @@ Flutter 統合用に設計されたヘルパークラスです。実行中のア
 1. `TraceRecorder<AppSnap>()` をインスタンス化します。
 2. テストの開始時に `recorder.initialize()` を呼び出します。
     3. 状態管理リスナー(Riverpod の `container.listen` など)またはテストインタラクション内の手動呼び出しを使用して、関連する状態変更が発生したりイベントをマークする必要があるたびに `recorder.record(AppSnap.fromAppState(...))` を呼び出します。
-4. インタラクション後、`recorder.trace` にアクセスし、`satisfiesLtl` マッチャーと共に `expect` ステートメントに渡しします。
+4. インタラクション後、`recorder.trace` にアクセスします。純粋な LTL であれば `temporal_logic_flutter_test.dart` の `satisfiesLtl` を使い、MTL を含む場合は `evaluateTrace` または `evaluateMtlTrace` を直接呼び出します。
     5. `addTearDown` を使用して `recorder.dispose()` を呼び出します。
 
-#### マッチャー (`satisfiesLtl`)
+#### Flutter 用テスト入口 (`temporal_logic_flutter_test.dart`)
 
-カスタム `flutter_test` マッチャーで、時制論理の評価を `expect` ステートメントに直接統合し、テストの読みやすさを向上させます。
+`temporal_logic_flutter_test.dart` は、Flutter 用の実行時ヘルパーを再公開したうえで、`expect` から使える `satisfiesLtl` を追加します。
 
 - **`Matcher satisfiesLtl<T>(Formula<T> formula)`**
   - **目的：** 指定された `Trace<T>` が与えられた LTL `formula` を満たすかどうかを確認する `Matcher` を作成します。
   - **仕組み：** 内部では、このマッチャーは `expect` に渡されたトレースに対して LTL 評価関数 (`temporal_logic_core` の `evaluateTrace` など) を呼び出します。
+  - **対象範囲：** このヘルパーは純粋な LTL 用です。MTL の場合は `evaluateMtlTrace` を直接呼び出して、返り値の `EvaluationResult` を確認します。
   - **使用方法：**
 
       ```dart
@@ -434,7 +439,7 @@ Flutter テストでトレースをキャプチャする最も一般的な方法
 ```dart
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:temporal_logic_flutter/temporal_logic_flutter.dart'
+import 'package:temporal_logic_flutter/temporal_logic_flutter_test.dart'
     as tlFlutter;
 import 'package:temporal_logic_core/temporal_logic_core.dart' as tlCore;
 // AppState、AppSnap、プロバイダー、およびメインアプリウィジェットをインポート
@@ -633,7 +638,7 @@ class AppSnap extends Equatable {
 
 - **Timed Response (MTL)： "`request`が発生した場合、`response`は特定の時間間隔(例： 5秒)以内に発生しなければならない。」
   - **意味： 基本のレスポンスパターンにリアルタイム制約を追加します。
-- **式： `always(request.implies(response.eventuallyTimed(TimeInterval(Duration.zero， Duration(seconds： 5)))))`
+- **式：** `always(request.implies(EventuallyTimed(response, TimeInterval(Duration.zero, Duration(seconds: 5)))))`
 - **MTL： `G(request -> F[0s， 5s] response)`
   - **使用例： パフォーマンス要件のテスト、タイムアウト、指定された期間内に完了するアニメーション、ユーザーフィードバックの即時表示。
 
@@ -832,7 +837,7 @@ final formula = tlCore.always(loginClicked.implies(tlCore.next(isLoading)));
   - 「リクエストが送信された(`requestSent`)場合、最終的に成功状態(`success`)または失敗状態(`failure`)に到達しなければならない。」 (生存/完了： `G(requestSent -> F(success.or(failure)))`)
 - "読み込みインジケーター(`isLoading`)は、リクエストが送信された後に最終的にfalseになる必要がある。」 (生存/終了： `G(requestSent -> F(isLoading.not()))`)
 - 「リクエストが失敗した場合(`failure`)、ユーザーがアクションを実行するまで(`dismissError`)エラーメッセージ(`hasError`)が表示される。」 (状態保持： `G(failure -> hasError.until(dismissError))`)
-  - 「リクエストは、10秒以内に成功応答を受け取らない場合、タイムアウト(`failure`状態に達する)する必要があります。」 (タイムドレスポンス： `G(requestSent.and(！success.eventuallyTimed(TimeInterval(Duration.zero， Duration(seconds:10))))) -> F(failure))`)
+  - 「リクエストは、10秒以内に成功応答を受け取らない場合、タイムアウト(`failure` 状態に達する)する必要があります。」 (タイムドレスポンス： `always(requestSent.and(EventuallyTimed(success, TimeInterval(Duration.zero, Duration(seconds: 10))).not()).implies(eventually(failure)))`)
 
 ## 7. トラブルシューティング
 

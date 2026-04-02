@@ -23,9 +23,9 @@
 dependencies:
   flutter:
     sdk: flutter
-  temporal_logic_core: ^0.1.0
-  temporal_logic_mtl: ^0.1.0
-  temporal_logic_flutter: ^0.0.1-dev
+  temporal_logic_core: ^0.1.1
+  temporal_logic_mtl: ^0.3.0
+  temporal_logic_flutter: ^0.1.2
 ```
 
 その後 `flutter pub get` を実行します。

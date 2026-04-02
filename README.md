@@ -62,9 +62,9 @@ Add the desired packages to your `pubspec.yaml` dependencies:
 
 ```yaml
 dependencies:
-  temporal_logic_core: ^<latest_version>
-  temporal_logic_mtl: ^<latest_version>
-  temporal_logic_flutter: ^<latest_version>
+  temporal_logic_core: ^0.1.1
+  temporal_logic_mtl: ^0.3.0
+  temporal_logic_flutter: ^0.1.2
 
 dev_dependencies:
   flutter_test:

@@ -26,11 +26,11 @@ Welcome to the detailed documentation for the `temporal_logic_core`, `temporal_l
       - [Helper Functions (`state`, `event`)](#helper-functions-state-event)
     - [`temporal_logic_mtl` API](#temporal_logic_mtl-api)
       - [TimeInterval](#timeinterval)
-      - [Timed Operators (`alwaysTimed`, `eventuallyTimed`)](#timed-operators-alwaystimed-eventuallytimed)
+      - [Timed Formula Classes (`EventuallyTimed`, `AlwaysTimed`, ...)](#timed-formula-classes-eventuallytimed-alwaystimed-)
       - [Evaluation (`evaluateMtlTrace`)](#evaluation-evaluatemtltrace)
     - [`temporal_logic_flutter` API](#temporal_logic_flutter-api)
       - [TraceRecorder](#tracerecorder)
-      - [Matchers (`satisfiesLtl`)](#matchers-satisfiesltl)
+      - [Flutter Test Entry Point (`temporal_logic_flutter_test.dart`)](#flutter-test-entry-point-temporal_logic_flutter_testdart)
   - [5. Cookbook \& Best Practices](#5-cookbook--best-practices)
     - [Integrating with State Management (Riverpod Example)](#integrating-with-state-management-riverpod-example)
     - [Designing Effective `AppSnap` Types](#designing-effective-appsnap-types)
@@ -67,7 +67,7 @@ Using these packages allows you to:
 
 - **`packages/temporal_logic_core`**: Foundational interfaces, LTL formula construction, and basic trace structures.
 - **`packages/temporal_logic_mtl`**: MTL implementation, adding timed operators and evaluation for timed traces.
-- **`packages/temporal_logic_flutter`**: Flutter-specific integrations, including `TraceRecorder` for capturing state sequences and `flutter_test` Matchers (`satisfiesLtl`, `satisfiesMtl`).
+- **`packages/temporal_logic_flutter`**: Flutter-specific integrations, including `TraceRecorder` for capturing state sequences and the `temporal_logic_flutter_test.dart` entry point for `satisfiesLtl`.
 
 ### Your First LTL Test (Login Flow Example)
 
@@ -78,7 +78,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:login_flow_ltl_example/main.dart'; // Your app
 import 'package:temporal_logic_core/temporal_logic_core.dart';
-import 'package:temporal_logic_flutter/temporal_logic_flutter.dart';
+import 'package:temporal_logic_flutter/temporal_logic_flutter_test.dart';
 
 // Represents a snapshot of the relevant application state for verification.
 // Needs to be immutable and implement ==/hashCode.
@@ -257,9 +257,10 @@ Standard logical operators (`and`, `or`, `not`, `implies`) combine these tempora
 MTL extends LTL by adding explicit time constraints to the temporal operators, allowing you to reason about *how long* things take. Provided by `temporal_logic_mtl`.
 
 - **`TimeInterval(Duration start, Duration end, {bool startInclusive, bool endInclusive})`**: Defines a precise time window relative to the current state's timestamp.
-- **`alwaysTimed(formula, TimeInterval interval)` (G[a,b])**: "`formula` must hold true at all future states whose timestamps fall within the specified `interval` relative to the current time." (e.g., "Globally, for the next 5 seconds, the error flag must be false").
-- **`eventuallyTimed(formula, TimeInterval interval)` (F[a,b])**: "`formula` must become true at some future state whose timestamp falls within the specified `interval` relative to the current time." (e.g., "Eventually, within 2 seconds, the success message must appear").
-- Evaluation requires a `Trace` with meaningful timestamps (usually automatically handled by `TraceRecorder`) and uses the `evaluateMtlTrace` function.
+- **`AlwaysTimed(formula, interval)` (G[a,b])**: "`formula` must hold true at all future states whose timestamps fall within the specified `interval` relative to the current time." (e.g., "For the next 5 seconds, the error flag must stay false").
+- **`EventuallyTimed(formula, interval)` (F[a,b])**: "`formula` must become true at some future state whose timestamp falls within the specified `interval` relative to the current time." (e.g., "Within 2 seconds, the success message must appear").
+- **`UntilTimed(left, right, interval)` / `ReleaseTimed(left, right, interval)` / `WeakUntilTimed(left, right, interval)`**: Timed variants of the corresponding temporal relationships when the bound itself matters.
+- Evaluation requires a `Trace` with meaningful timestamps (usually automatically handled by `TraceRecorder`) and uses `evaluateMtlTrace`.
 
 ## 4. API Reference
 
@@ -351,7 +352,7 @@ This package extends `temporal_logic_core` by adding Metric Temporal Logic (MTL)
 
 #### TimeInterval
 
-A class defining a time window used by timed MTL operators (like `alwaysTimed` and `eventuallyTimed`). It specifies a range relative to the timestamp of the current state being evaluated.
+A class defining a time window used by timed MTL formula classes such as `AlwaysTimed`, `EventuallyTimed`, `UntilTimed`, `ReleaseTimed`, and `WeakUntilTimed`. It specifies a range relative to the timestamp of the current state being evaluated.
 
 - **Constructor:** `TimeInterval(Duration start, Duration end, {bool startInclusive = true, bool endInclusive = false})`
   - **`start`**: The start `Duration` of the interval (relative to the current time).
@@ -364,19 +365,22 @@ A class defining a time window used by timed MTL operators (like `alwaysTimed` a
   - `TimeInterval(Duration(seconds: 2), Duration(seconds: 10), endInclusive: true)` represents `[2s, 10s]` - from 2 seconds up to and including 10 seconds.
   - `TimeInterval(Duration(seconds: 1), Duration(seconds: 1))` represents the single instant `t = 1s` (since `startInclusive` is true and `endInclusive` is false by default).
 
-#### Timed Operators (`alwaysTimed`, `eventuallyTimed`)
+#### Timed Formula Classes (`EventuallyTimed`, `AlwaysTimed`, ...)
 
-These operators extend their LTL counterparts (`always`, `eventually`) by adding a `TimeInterval` constraint.
+These classes extend LTL-style reasoning with an explicit `TimeInterval`.
 
-- **`formula.alwaysTimed(interval)`** or `alwaysTimed(formula, interval)`:
+- **`AlwaysTimed(formula, interval)`**:
   - **Symbol:** G[`interval`] `formula` (e.g., G[0, 5s] `formula`)
-  - **Semantics:** The `formula` must hold true at *all* future states in the trace whose timestamp `t_future` satisfies `t_current + interval.start <= t_future < t_current + interval.end` (adjusting for inclusiveness based on `interval` flags). If no states fall within the interval, the operator is vacuously true.
-  - **Example:** `dataFetched.implies(loadingIndicatorVisible.not().alwaysTimed(TimeInterval(Duration.zero, Duration(seconds: 1))))` (If data was fetched, then the loading indicator must *not* be visible for the entire interval from 0s to 1s after the fetch).
+  - **Semantics:** The `formula` must hold true at *all* future states in the trace whose timestamp `tFuture` satisfies `tCurrent + interval.start <= tFuture < tCurrent + interval.end` (adjusting for inclusiveness based on `interval` flags). If no states fall within the interval, the formula is vacuously true.
+  - **Example:** `dataFetched.implies(AlwaysTimed(loadingIndicatorVisible.not(), TimeInterval(Duration.zero, Duration(seconds: 1))))` (If data was fetched, then the loading indicator must *not* be visible for the entire interval from 0s to 1s after the fetch).
 
-- **`formula.eventuallyTimed(interval)`** or `eventuallyTimed(formula, interval)`:
+- **`EventuallyTimed(formula, interval)`**:
   - **Symbol:** F[`interval`] `formula` (e.g., F[2s, 5s] `formula`)
-  - **Semantics:** The `formula` must hold true at *at least one* future state in the trace whose timestamp `t_future` satisfies `t_current + interval.start <= t_future < t_current + interval.end` (adjusting for inclusiveness). If no state within the interval satisfies the formula, or if no states fall within the interval, the operator is false.
-  - **Example:** `requestSent.implies(responseReceived.eventuallyTimed(TimeInterval(Duration.zero, Duration(seconds: 3))))` (If a request was sent, a response must be received sometime within the next 3 seconds).
+  - **Semantics:** The `formula` must hold true at *at least one* future state in the trace whose timestamp `tFuture` satisfies `tCurrent + interval.start <= tFuture < tCurrent + interval.end` (adjusting for inclusiveness). If no state within the interval satisfies the formula, or if no states fall within the interval, the formula is false.
+  - **Example:** `requestSent.implies(EventuallyTimed(responseReceived, TimeInterval(Duration.zero, Duration(seconds: 3))))` (If a request was sent, a response must be received sometime within the next 3 seconds).
+
+- **`UntilTimed(left, right, interval)` / `ReleaseTimed(left, right, interval)` / `WeakUntilTimed(left, right, interval)`**:
+  - **Purpose:** Provide timed versions of `until`, `release`, and `weakUntil` when the relationship must be checked inside a bounded interval.
 
 #### Evaluation (`evaluateMtlTrace`)
 
@@ -386,16 +390,16 @@ This is the core function in `temporal_logic_mtl` used to check if a timed trace
 - **Purpose:** Evaluates whether the given `formula` (which can contain LTL and MTL operators) holds true for the provided `trace`, starting the evaluation from the state at `startIndex`.
 - **Parameters:**
   - `trace`: The `Trace<T>` object containing the sequence of state snapshots and their timestamps.
-  - `formula`: The `Formula<T>` (potentially including timed operators like `alwaysTimed` or `eventuallyTimed`) to evaluate against the trace.
+  - `formula`: The `Formula<T>` (potentially including timed formula classes such as `AlwaysTimed`, `EventuallyTimed`, `UntilTimed`, `ReleaseTimed`, or `WeakUntilTimed`) to evaluate against the trace.
   - `startIndex`: The index within the trace from which to start the evaluation. Defaults to `0` (the beginning of the trace).
 - **Returns:** An `EvaluationResult` object.
   - `bool holds`: `true` if the formula holds for the trace starting at `startIndex`, `false` otherwise.
   - `String? reason`: If `holds` is `false`, this may contain a string explaining why the formula failed (e.g., which sub-formula failed at which index or time). This is helpful for debugging test failures.
-- **Usage:** While you can call this function directly, it's more common in Flutter tests to use the `satisfiesMtl` matcher provided by `temporal_logic_flutter`, which calls this function internally.
+- **Usage:** Call this function directly for MTL assertions. `temporal_logic_flutter` provides `satisfiesLtl` for pure LTL traces, but it does not provide a `satisfiesMtl` matcher.
 
 ### `temporal_logic_flutter` API
 
-This package provides utilities specifically for integrating temporal logic testing into Flutter applications, primarily using `flutter_test`.
+This package provides utilities for integrating temporal logic into Flutter applications. Runtime helpers are exported from `temporal_logic_flutter.dart`, and the test entry point `temporal_logic_flutter_test.dart` adds `satisfiesLtl` for use with `expect`.
 
 #### TraceRecorder<T>
 
@@ -412,15 +416,16 @@ A helper class designed for Flutter integration. It simplifies the process of ca
     1. Instantiate `TraceRecorder<AppSnap>()`.
     2. Call `recorder.initialize()` at the start of the test.
     3. Use a state management listener (like `container.listen` for Riverpod) or manual calls within test interactions to call `recorder.record(AppSnap.fromAppState(...))` whenever a relevant state change occurs or an event needs marking.
-    4. After interactions, access `recorder.trace` and pass it to an `expect` statement with a `satisfiesLtl` matcher.
+    4. After interactions, access `recorder.trace` and either use `satisfiesLtl` from `temporal_logic_flutter_test.dart` for pure LTL checks, or call `evaluateTrace` / `evaluateMtlTrace` directly.
 
-#### Matchers (`satisfiesLtl`)
+#### Flutter Test Entry Point (`temporal_logic_flutter_test.dart`)
 
-Custom `flutter_test` matchers that integrate temporal logic evaluation directly into your `expect` statements, making tests more readable.
+`temporal_logic_flutter_test.dart` re-exports the runtime Flutter helpers and adds `satisfiesLtl` so you can use temporal assertions directly in `expect` statements.
 
 - **`Matcher satisfiesLtl<T>(Formula<T> formula)`**
   - **Purpose:** Creates a `Matcher` that checks if a given `Trace<T>` satisfies the provided LTL `formula`.
   - **Mechanism:** Internally, this matcher calls an LTL evaluation function (like `evaluateTrace` from `temporal_logic_core`) on the trace provided to `expect`.
+  - **Scope:** This helper is intentionally limited to pure LTL. For MTL, call `evaluateMtlTrace` directly and assert on the returned `EvaluationResult`.
   - **Usage:**
 
       ```dart
@@ -453,7 +458,7 @@ The most common way to capture a trace in Flutter tests is to listen to changes 
 ```dart
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:temporal_logic_flutter/temporal_logic_flutter.dart';
+import 'package:temporal_logic_flutter/temporal_logic_flutter_test.dart';
 import 'package:temporal_logic_core/temporal_logic_core.dart';
 // Import your AppState, AppSnap, providers, and main app widget
 // ...
@@ -517,7 +522,7 @@ void main() {
     final trace = recorder.trace;
     final formula = always(/* ... your LTL/MTL formula ... */);
 
-    expect(trace, satisfiesLtl(formula)); // Or satisfiesMtl
+    expect(trace, satisfiesLtl(formula));
 
     // Recorder is disposed automatically via addTearDown if needed,
     // but container disposal is usually the more critical part.
@@ -650,7 +655,7 @@ Temporal logic formulas often follow recurring patterns that express fundamental
 
 - **Timed Response (MTL):** "If `request` happens, then `response` must occur within a specific time interval (e.g., 5 seconds)."
   - **Meaning:** Extends the basic Response pattern with a real-time constraint.
-  - **Formula:** `always(request.implies(response.eventuallyTimed(TimeInterval(Duration.zero, Duration(seconds: 5)))))`
+  - **Formula:** `always(request.implies(EventuallyTimed(response, TimeInterval(Duration.zero, Duration(seconds: 5)))))`
   - **MTL:** `G(request -> F[0s, 5s] response)`
   - **Use Case:** Testing performance requirements, timeouts, animations completing within a duration, user feedback appearing promptly.
 
@@ -850,7 +855,7 @@ This section outlines potential application scenarios where temporal logic testi
   - "If a request is sent (`requestSent`), eventually either a success state (`success`) or a failure state (`failure`) must be reached." (Liveness/Completion: `G(requestSent -> F(success.or(failure)))`)
   - "The loading indicator (`isLoading`) must eventually become false after a request is sent." (Liveness/Termination: `G(requestSent -> F(isLoading.not()))`)
   - "If a request fails (`failure`), an error message (`hasError`) is displayed until the user takes an action (`dismissError`)." (State Holding: `G(failure -> hasError.until(dismissError))`)
-  - "A request should time out (reach `failure` state) if no success response is received within 10 seconds." (Timed Response: `G(requestSent.and(!success.eventuallyTimed(TimeInterval(Duration.zero, Duration(seconds:10))))) -> F(failure))`)
+  - "A request should time out (reach `failure` state) if no success response is received within 10 seconds." (Timed Response: `always(requestSent.and(EventuallyTimed(success, TimeInterval(Duration.zero, Duration(seconds: 10))).not()).implies(eventually(failure)))`)
 
 ## 7. Troubleshooting
 

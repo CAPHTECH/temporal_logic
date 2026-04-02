@@ -21,7 +21,7 @@ AST、Trace、評価結果、そして `evaluateTrace` / `evaluateLtl` の入口
 
 ```yaml
 dependencies:
-  temporal_logic_core: ^0.1.0
+  temporal_logic_core: ^0.1.1
 ```
 
 その後 `flutter pub get` または `dart pub get` を実行します。
