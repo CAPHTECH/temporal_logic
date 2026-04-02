@@ -1,19 +1,16 @@
 import 'package:temporal_logic_mtl/temporal_logic_mtl.dart';
 
-import 'formula_stream_checker_base.dart';
 import 'stream_evaluation_start.dart';
+import 'stream_trace_checker_base.dart';
 
 /// Provides periodic evaluation of a temporal logic [Formula]<S> (LTL/MTL)
 /// against a stream of time-stamped values. Incoming events are accumulated
 /// into an internal trace and evaluated on every new event.
 ///
 /// Type parameter [S] defines the type of the state values in the trace.
-class StreamMtlChecker<S>
-    extends FormulaStreamCheckerBase<TimedValue<S>, EvaluationResult> {
+class StreamMtlChecker<S> extends StreamTraceCheckerBase<TimedValue<S>,
+    TraceEvent<S>, Trace<S>, EvaluationResult> {
   final Formula<S> _formula;
-  final List<TraceEvent<S>> _internalTraceEvents = [];
-  final TimedValue<S>? _initialValue;
-  final StreamEvaluationStart _evaluationStart;
 
   /// Creates a [StreamMtlChecker] that listens to the specified [stream] of
   /// timed states and evaluates the given [formula]. If [initialValue] is
@@ -25,22 +22,25 @@ class StreamMtlChecker<S>
     TimedValue<S>? initialValue,
     StreamEvaluationStart evaluationStart = StreamEvaluationStart.beginning,
   })  : _formula = formula,
-        _initialValue = initialValue,
-        _evaluationStart = evaluationStart,
-        super(stream) {
-    final initialTimedValue = _initialValue;
-    if (initialTimedValue != null) {
-      _internalTraceEvents.add(TraceEvent(
-          timestamp: initialTimedValue.timestamp,
-          value: initialTimedValue.value));
-    }
+        super(
+          stream,
+          evaluationStart: evaluationStart,
+          buildTraceSnapshot: (entries) => Trace<S>(entries),
+          initialEntry: initialValue == null
+              ? null
+              : TraceEvent(
+                  timestamp: initialValue.timestamp,
+                  value: initialValue.value,
+                ),
+        ) {
     initializeWithInitialEvaluation(_evaluate);
   }
 
   @override
   void onInput(TimedValue<S> input) {
-    _internalTraceEvents
-        .add(TraceEvent(timestamp: input.timestamp, value: input.value));
+    appendTraceEntry(
+      TraceEvent(timestamp: input.timestamp, value: input.value),
+    );
   }
 
   @override
@@ -50,22 +50,11 @@ class StreamMtlChecker<S>
 
   /// Performs the actual LTL/MTL check using the integrated evaluator.
   EvaluationResult _evaluate() {
-    // Create Trace from the list of TraceEvents
-    final currentTrace = Trace(_internalTraceEvents);
-    // Use the unified evaluator from the mtl package
+    final currentTrace = buildCurrentTrace();
     return evaluateMtlTrace(
       currentTrace,
       _formula,
-      startIndex: _evaluationStart.resolveStartIndex(currentTrace.length),
+      startIndex: resolveStartIndex(),
     );
-  }
-
-  /// Disposes the checker by cancelling the stream subscription, closing
-  /// the [resultStream], and clearing all internal trace events.
-  /// After disposal, no further results will be emitted.
-  @override
-  void dispose() {
-    _internalTraceEvents.clear();
-    super.dispose();
   }
 }

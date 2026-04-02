@@ -1,7 +1,7 @@
 import 'package:temporal_logic_core/temporal_logic_core.dart';
 
-import 'formula_stream_checker_base.dart';
 import 'stream_evaluation_start.dart';
+import 'stream_trace_checker_base.dart';
 
 /// Provides evaluation of a Linear Temporal Logic (LTL) [Formula]<S>
 /// against a stream of state values.
@@ -17,11 +17,8 @@ import 'stream_evaluation_start.dart';
 /// after the checker is created.
 ///
 /// Type parameter [S] defines the type of the state values.
-class StreamLtlChecker<S> extends FormulaStreamCheckerBase<S, bool> {
+class StreamLtlChecker<S> extends StreamTraceCheckerBase<S, S, Trace<S>, bool> {
   final Formula<S> _formula;
-  final _trace = <S>[];
-  final S? _initialValue;
-  final StreamEvaluationStart _evaluationStart;
 
   /// Creates an [StreamLtlChecker] that listens to the specified [stream] of
   /// states and evaluates the given LTL [formula].
@@ -40,19 +37,18 @@ class StreamLtlChecker<S> extends FormulaStreamCheckerBase<S, bool> {
     S? initialValue,
     StreamEvaluationStart evaluationStart = StreamEvaluationStart.beginning,
   })  : _formula = formula,
-        _initialValue = initialValue,
-        _evaluationStart = evaluationStart,
-        super(stream) {
-    final initialState = _initialValue;
-    if (initialState != null) {
-      _trace.add(initialState);
-    }
+        super(
+          stream,
+          evaluationStart: evaluationStart,
+          buildTraceSnapshot: (entries) => Trace<S>.fromList(entries),
+          initialEntry: initialValue,
+        ) {
     initializeWithInitialEvaluation(check);
   }
 
   @override
   void onInput(S input) {
-    _trace.add(input);
+    appendTraceEntry(input);
   }
 
   @override
@@ -69,22 +65,12 @@ class StreamLtlChecker<S> extends FormulaStreamCheckerBase<S, bool> {
   /// Returns the boolean result of the evaluation. If the internal trace is
   /// empty, it evaluates the formula on an empty trace (using index 0).
   bool check() {
-    if (_trace.isEmpty) {
-      final tempTrace = Trace<S>.empty();
-      return evaluateTrace(tempTrace, _formula).holds;
-    }
-    final timedTrace = Trace<S>.fromList(_trace);
-    final startIndex = _evaluationStart.resolveStartIndex(_trace.length);
-    final result = evaluateTrace(timedTrace, _formula, startIndex: startIndex);
+    final currentTrace = buildCurrentTrace();
+    final result = evaluateTrace(
+      currentTrace,
+      _formula,
+      startIndex: resolveStartIndex(),
+    );
     return result.holds;
-  }
-
-  /// Cancels all subscriptions, timers, and closes the result stream.
-  /// Clears the internal trace to free memory. After disposal, no further
-  /// results will be emitted.
-  @override
-  void dispose() {
-    _trace.clear();
-    super.dispose();
   }
 }
