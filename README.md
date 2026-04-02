@@ -142,8 +142,8 @@ For Flutter-specific usage, import `package:temporal_logic_flutter/temporal_logi
 3. **Clone the repository:**
 
     ```bash
-    git clone https://github.com/your-username/temporal_logic_flutter.git # Replace with actual repo URL
-    cd temporal_logic_flutter
+    git clone git@github.com:CAPHTECH/temporal_logic.git
+    cd temporal_logic
     ```
 
 4. **Get dependencies:**
@@ -173,7 +173,7 @@ Please note that this project adheres to a [Contributor Covenant code of conduct
 
 ## Reporting Issues & Getting Support
 
-Please report any bugs or feature requests on the [GitHub Issue Tracker](https://github.com/your-username/temporal_logic_flutter/issues). <!-- TODO: Replace with actual repo URL -->
+Please report any bugs or feature requests on the [GitHub Issue Tracker](https://github.com/CAPHTECH/temporal_logic/issues).
 
 ## License
 
