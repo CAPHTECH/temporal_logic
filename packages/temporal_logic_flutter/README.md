@@ -122,4 +122,5 @@ testWidgets('widget follows the LTL rule', (tester) async {
 * `MtlCheckerWidget` の `builder` は `bool` と `EvaluationResult` を受け取ります。
 * `StreamEvaluationStart.beginning` は蓄積 trace の先頭から評価し、`current` は最新イベントから評価します。
 * `TraceRecorder` は widget ではなく、テストやアプリ側から明示的に `initialize` と `record` を呼ぶ記録ユーティリティです。
+* アプリ本体は `package:temporal_logic_flutter/temporal_logic_flutter.dart`、テストは `package:temporal_logic_flutter/temporal_logic_flutter_test.dart` を正規の入口として使い、`src/` への直接 import は避けます。
 * `temporal_logic_flutter_test.dart` は `temporal_logic_flutter.dart` と matcher を再公開します。

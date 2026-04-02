@@ -6,6 +6,17 @@
 
 This repository contains a collection of Dart packages for working with various forms of temporal logic, primarily aimed at verification and specification within Flutter applications, but also usable in pure Dart environments.
 
+## Public API and Migration
+
+Use the package libraries as the supported entry points:
+
+* `package:temporal_logic_core/temporal_logic_core.dart`
+* `package:temporal_logic_mtl/temporal_logic_mtl.dart`
+* `package:temporal_logic_flutter/temporal_logic_flutter.dart`
+* `package:temporal_logic_flutter/temporal_logic_flutter_test.dart`
+
+Files under `src/` are implementation details and can change during refactoring. If you used the removed legacy MTL helpers, see [MIGRATION.md](MIGRATION.md).
+
 ## Why Temporal Logic for Flutter/Dart?
 
 Modern applications, especially UI-rich applications built with frameworks like Flutter, often involve complex sequences of events, state changes, and timing dependencies. Bugs can arise from:
@@ -35,15 +46,15 @@ Even if you don't perform formal verification, the act of writing down temporal 
 
 ## Packages
 
-* **`packages/temporal_logic_core`**: Provides the fundamental interfaces and structures for propositional logic and basic trace representations.
-* **`packages/temporal_logic_mtl`**: Implements Metric Temporal Logic (MTL), allowing specifications over timed traces with quantitative time constraints.
-* **`packages/temporal_logic_flutter`**: Integrates temporal logic concepts with Flutter, potentially offering widgets or utilities for visualizing or checking properties against application state changes over time (details TBD).
+* **`packages/temporal_logic_core`**: Core AST, trace model, `EvaluationResult`, and `evaluateTrace` / `evaluateLtl`.
+* **`packages/temporal_logic_mtl`**: Timed operators and `evaluateMtlTrace` for Metric Temporal Logic over timed traces.
+* **`packages/temporal_logic_flutter`**: Flutter-oriented stream checkers, widgets, trace recording, and test matchers.
 
 ## Features
 
-* Core propositional logic building blocks.
-* Metric Temporal Logic (MTL) formula construction and evaluation.
-* (Planned/Potential) Flutter integration for runtime verification or visualization.
+* Core propositional logic and LTL building blocks.
+* Metric Temporal Logic (MTL) formula construction and timed evaluation.
+* Flutter integration for stream-based checking, widgets, trace recording, and test helpers.
 
 ## Installation
 
@@ -51,9 +62,9 @@ Add the desired packages to your `pubspec.yaml` dependencies:
 
 ```yaml
 dependencies:
-  temporal_logic_core: ^<latest_version> # Check pub.dev for the latest version
-  temporal_logic_mtl: ^<latest_version>  # Check pub.dev for the latest version
-  # temporal_logic_flutter: ^<latest_version> # Uncomment when available
+  temporal_logic_core: ^<latest_version>
+  temporal_logic_mtl: ^<latest_version>
+  temporal_logic_flutter: ^<latest_version>
 
 dev_dependencies:
   flutter_test:
@@ -64,42 +75,22 @@ Then run `flutter pub get`.
 
 ## Usage
 
-Here's a brief overview of how to use the core packages. See the `examples/` directory for more detailed scenarios.
+Here is a brief overview of the current API. See the package READMEs and `examples/` for fuller scenarios.
 
 **`temporal_logic_core`**
 
 ```dart
 import 'package:temporal_logic_core/temporal_logic_core.dart';
 
-// Define atomic propositions using predicates
-final p = AtomicProposition<Map<String, bool>>((state) => state['p'] ?? false, name: 'p');
-final q = AtomicProposition<Map<String, bool>>((state) => state['q'] ?? false, name: 'q');
+final isPositive = state<int>((value) => value > 0, name: 'isPositive');
+final isEven = state<int>((value) => value.isEven, name: 'isEven');
+final formula = always(isPositive.implies(isEven));
 
-// Create simple formulas using the builder methods
-final formula = p.and(q.not()); // Equivalent to: And(p, Not(q))
+final trace = Trace<int>.fromList([2, 4, 6, 7, 8]);
+final result = evaluateTrace(trace, formula);
 
-// Define a state (a valuation mapping proposition names/IDs to truth values)
-final state = {'p': true, 'q': false};
-
-// --- Evaluation Note ---
-// Evaluation is typically done using an evaluator function against a trace
-// (a sequence of states). For a single state:
-bool evaluateAtomicInState(Formula<Map<String, bool>> formula, Map<String, bool> state) {
-  if (formula is AtomicProposition<Map<String, bool>>) {
-    return formula.predicate(state);
-  }
-  // ... handle other formula types recursively (Not, And, Or, etc.)
-  // This is a simplified illustration; the actual evaluator handles traces.
-  throw UnimplementedError('Full evaluation logic resides in the evaluator.');
-}
-
-// Conceptually evaluating the proposition p in the state:
-final pResult = evaluateAtomicInState(p, state);
-print('Proposition "${p.name}" holds in state: $pResult'); // Output: true
-
-// Evaluating the full formula requires a proper trace evaluator.
-// The string representation shows the formula structure:
-print('Formula structure: "$formula"'); // Output: Formula structure: "(p && !(q))"
+print(result.holds);
+print(result.reason);
 ```
 
 **`temporal_logic_mtl`**
@@ -108,34 +99,30 @@ print('Formula structure: "$formula"'); // Output: Formula structure: "(p && !(q
 import 'package:temporal_logic_core/temporal_logic_core.dart';
 import 'package:temporal_logic_mtl/temporal_logic_mtl.dart';
 
-// Define atomic propositions using predicates on the state type (e.g., Map)
-final request = AtomicProposition<Map<String, bool>>((state) => state['request'] ?? false, name: 'request');
-final response = AtomicProposition<Map<String, bool>>((state) => state['response'] ?? false, name: 'response');
+final request = state<String>((value) => value == 'request', name: 'request');
+final response = state<String>((value) => value == 'response', name: 'response');
 
-// Define an MTL formula: Globally, if 'request' happens, then 'response'
-// must happen within 5 time units.
-// Using builder methods: request.implies(response.eventually(interval: TimeInterval(0, 5))).always()
-final spec = Always(
-  Implies(request, EventuallyTimed(response, interval: TimeInterval(0, 5))),
+final spec = always(
+  request.implies(
+    EventuallyTimed(
+      response,
+      TimeInterval.upTo(const Duration(seconds: 5)),
+    ),
+  ),
 );
 
-// Define a timed trace (sequence of states with timestamps)
-// The state type must match the AtomicProposition type (Map<String, bool>)
-final trace = Trace<Map<String, bool>>([
-  TraceEvent({'request': false, 'response': false}, 0),
-  TraceEvent({'request': true, 'response': false}, 1),
-  TraceEvent({'request': false, 'response': false}, 2),
-  TraceEvent({'request': false, 'response': true}, 4), // Response arrives at t=4 (within 5 units of request at t=1)
-  TraceEvent({'request': false, 'response': false}, 6),
+final trace = Trace<String>([
+  TraceEvent(timestamp: Duration.zero, value: 'idle'),
+  TraceEvent(timestamp: const Duration(seconds: 1), value: 'request'),
+  TraceEvent(timestamp: const Duration(seconds: 3), value: 'response'),
 ]);
 
-// Evaluate the specification against the trace using the MTL evaluator
-// The evaluator function takes the formula, the trace, and the starting index.
-final result = evaluateMtlTrace(spec, trace, 0); // Evaluate from the beginning (index 0)
-print('Specification "$spec" holds on trace: $result'); // Expected output depends on exact MTL semantics implementation
+final result = evaluateMtlTrace(trace, spec);
+print(result.holds);
+print(result.reason);
 ```
 
-*(Note: Ensure `temporal_logic_mtl` provides an `evaluateMtlTrace` function or similar for evaluation. The example assumes its existence.)*
+For Flutter-specific usage, import `package:temporal_logic_flutter/temporal_logic_flutter.dart` and see the package README for `StreamLtlChecker`, `StreamMtlChecker`, `LtlCheckerWidget`, `MtlCheckerWidget`, and `TraceRecorder`.
 
 ## Examples
 

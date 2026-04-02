@@ -15,11 +15,12 @@
 
 - 現在のコードベースは、正しさの観点ではかなり安定しています。`core`、`mtl`、`flutter` の各パッケージでテストはすべて通過し、静的解析も警告なしです。
 - 大きかった構造負債は、すでに主要部分が解消済みです。`mtl_operators.dart` の分割、`evaluateTrace` / `evaluateMtlTrace` の共通化、`StreamLtlChecker` / `StreamMtlChecker` と widget ライフサイクルの共通化まで完了しています。
-- いま残っている判断点は、公開 API の export 面をどこまで整理するか、旧 MTL ヘルパーを次の major で削るか残すか、そして README を現行 API に保ち続ける運用です。
+- package library を正規の公開入口として明文化し、公開 export は回帰テストで固定しました。旧来の MTL helper は削除し、移行案内も追加しています。
+- 残る課題は、構造上の大きな負債ではなく、公開 API と changelog を今後も実装に同期し続ける運用です。
 
 ### Overall Health Score
 
-**92 / 100**
+**94 / 100**
 
 判定理由:
 - 正しさのベースラインは強い。3 パッケージのテストが通過している。
@@ -30,7 +31,7 @@
 
 - Critical: 0
 - Medium: 0
-- Low: 2
+- Low: 1
 
 ## Baseline
 
@@ -50,7 +51,8 @@
 - `StreamLtlChecker` / `StreamMtlChecker` と `LtlCheckerWidget` / `MtlCheckerWidget` のライフサイクル共通化は完了しています。
 - `checker_parity_test.dart`、`checker_widget_parity_test.dart`、`evaluation_result_parity_test.dart` で、pure LTL の parity と widget の再初期化条件が固定されています。
 - README は現行の export とコンストラクタに合わせて更新済みです。
-- `public_api_exports_test.dart` と `mtl_legacy_helpers_test.dart` で、公開入口と旧来ヘルパーの互換挙動を固定しています。
+- `public_api_exports_test.dart` で、`core`、`mtl`、`flutter` の公開入口を固定しています。
+- `MIGRATION.md`、root `README.md`、各パッケージの `CHANGELOG.md` を更新し、利用者向けの移行案内を整えました。
 
 ### しきい値に対する要点
 
@@ -65,7 +67,7 @@
 ### 1. MTL 評価器の分割と整理
 
 - `mtl_operators.dart` は AST と評価器と旧 API を抱え込む形から分割済みです。
-- 現在は `mtl_ast.dart`、`mtl_evaluator.dart`、`mtl_legacy_helpers.dart` に責務が分かれ、`evaluateMtlTrace` は薄い入口になっています。
+- 現在は `mtl_ast.dart` と `mtl_evaluator.dart` に責務が分かれ、`evaluateMtlTrace` は package library から直接公開されています。
 - LTL の評価ロジックは core 側の共通 helper に寄せられ、二重修正のリスクが大きく下がりました。
 
 ### 2. Stream checker と widget の共通化
@@ -84,71 +86,38 @@
 - `temporal_logic_core`、`temporal_logic_mtl`、`temporal_logic_flutter` の README を、現在の export とコンストラクタに合わせて更新済みです。
 - Flutter README からは古い `checker:` や `statusStream` の前提を外しました。
 
+### 5. 公開 API 方針の固定と旧来ヘルパーの削除
+
+- `temporal_logic_core.dart`、`temporal_logic_mtl.dart`、`temporal_logic_flutter.dart`、`temporal_logic_flutter_test.dart` を stable public entry point として明文化しました。
+- `temporal_logic_mtl.dart` は compatibility facade ではなく、timed evaluator と timed AST を直接公開する形に整理しました。
+- `checkEventuallyWithin`、`checkAlwaysWithin`、`checkUntilWithin` は削除し、移行先を `MIGRATION.md` にまとめました。
+
 ## Current Focus
 
-### Low 1: 公開 API 整理の方針を明確にする
+### Low 1: 公開 API と変更履歴の同期を維持する
 
 **対象**:
-- `packages/temporal_logic_flutter/lib/temporal_logic_flutter.dart`
-- `packages/temporal_logic_mtl/lib/temporal_logic_mtl.dart`
-- `packages/temporal_logic_core/lib/temporal_logic_core.dart`
+- `README.md`
+- `MIGRATION.md`
+- `packages/*/CHANGELOG.md`
 
 **評価軸**
 
 | 指標 | 値 | 根拠 |
 |------|---:|------|
-| Complexity | 2/5 | export の整理が中心 |
-| Coupling | 3/5 | 3 パッケージの見え方に影響する |
-| Bug Risk | 2/5 | 振る舞いより見せ方の変更が主 |
-| Coverage Confidence | 4/5 | export 追加の軽いテストがある |
-| Blast Radius | 4/5 | 利用者の import 面に直結する |
-| Effort | 2/5 | 方針決定後は小さく進められる |
+| Complexity | 1/5 | 実装の複雑さは低い |
+| Coupling | 2/5 | ドキュメントと公開面の同期が中心 |
+| Bug Risk | 1/5 | 主に案内のずれを防ぐ作業 |
+| Coverage Confidence | 4/5 | 公開 export はテストで固定済み |
+| Blast Radius | 3/5 | 利用者向けの案内には影響する |
+| Effort | 1/5 | 小さく継続できる |
 
 **優先度**: Low
 
 **最初に着手するなら何を分割するか**
 
-- まず `flutter` の export 面を「公開したいもの」と「内部の互換資産」に分けて一覧化する。
-- その上で、次の major で削る候補を明示する。
-
-### Low 2: 旧 MTL ヘルパーの扱いを最終整理候補にする
-
-**対象**:
-- `packages/temporal_logic_mtl/lib/src/mtl_legacy_helpers.dart`
-- `packages/temporal_logic_mtl/lib/src/mtl_operators.dart`
-
-**評価軸**
-
-| 指標 | 値 | 根拠 |
-|------|---:|------|
-| Complexity | 2/5 | 各ファイル単体は小さめ |
-| Coupling | 3/5 | legacy helper と compatibility facade の関係が残っている |
-| Bug Risk | 2/5 | 現時点で不具合は見えないが、拡張時に差分が生じやすい |
-| Coverage Confidence | 4/5 | unit test と property-based test が厚い |
-| Blast Radius | 3/5 | main library export からは外れている |
-| Effort | 2/5 | checker 側の整理に合わせて段階的に直せる |
-
-**優先度**: Low
-
-**観測根拠**
-
-- `checkEventuallyWithin`、`checkAlwaysWithin`、`checkUntilWithin` は互換レイヤーとして `src/mtl_legacy_helpers.dart` に残っています。
-- `temporal_logic_mtl.dart` からはそれらを再公開していません。
-
-**互換性を維持する案**
-
-- 現行の 2 種類の widget と checker を残す。
-- 内部だけを共通化し、旧 API は deprecated のまま隔離する。
-- `temporal_logic_mtl.dart` と `temporal_logic_flutter.dart` の export は変えない。
-
-**整理を優先する案**
-
-- `mtl_legacy_helpers.dart` を次の major で削除する。
-- `compatibility facade` は残しても、公開入口からは完全に外す。
-
-**最初に着手するなら何を分割するか**
-
-- 旧 API の利用有無を最終確認し、削除タイミングを major 単位で決める。
+- release 前チェックに changelog と migration の更新確認を加える。
+- package library 以外の import が増えていないかを `rg` で点検する。
 
 ## Metrics Summary
 
@@ -162,14 +131,13 @@
 | `packages/temporal_logic_core/lib/src/evaluator.dart` | 137 | 4 | core LTL の入口 |
 | `packages/temporal_logic_flutter/lib/src/ltl_checker_widget.dart` | 135 | 3 | 共通基盤の上で `bool` 結果を UI に橋渡しする薄いラッパー |
 | `packages/temporal_logic_flutter/lib/src/formula_stream_checker_base.dart` | 109 | 2 | stream checker の共通基盤 |
-| `packages/temporal_logic_mtl/lib/src/mtl_legacy_helpers.dart` | 98 | 1 | 旧 API の隔離先 |
 | `packages/temporal_logic_flutter/lib/src/stream_ltl_checker.dart` | 90 | 4 | trace 共通基盤を使う LTL checker |
 | `packages/temporal_logic_core/lib/src/evaluation_result.dart` | 73 | 1 | result 型の分離先 |
 | `packages/temporal_logic_flutter/lib/src/stream_mtl_checker.dart` | 71 | 5 | trace 共通基盤を使う timed checker |
 
 ### 補足
 
-- 以前は `mtl_operators.dart` が高い分岐密度を持つ中心的な負債でしたが、現在は compatibility facade へ縮小されています。
+- 以前は `mtl_operators.dart` が高い分岐密度を持つ中心的な負債でしたが、現在は軽量な compatibility facade へ縮小されています。
 - stream checker と widget も共通基盤に寄せられたため、現在の論点は複雑度より公開面と互換資産の管理に移っています。
 
 ### 参照の広さ
@@ -182,16 +150,16 @@
 
 ## Recommended Refactoring Sequence
 
-1. export 面を見直し、公開する型と互換資産を分ける
-2. 旧 MTL ヘルパーの削除時期を major 単位で決める
-3. README と public API の説明を、実装に合わせて維持する
+1. changelog と migration を release ごとに更新する
+2. package library 以外の import が広がっていないかを定期確認する
+3. 公開 export の回帰テストを新しい入口追加時に更新する
 
 ## すぐに実装へ移るなら
 
 ### 最初の実装単位
 
-- Step 1: `temporal_logic_flutter.dart` の export 面を「公開」「内部互換」に分けて整理する
-- Step 2: `mtl_legacy_helpers.dart` の扱いを次の major で消すか残すか決める
+- Step 1: release 前チェックに `MIGRATION.md`、root `README.md`、`packages/*/CHANGELOG.md` の更新確認を入れる
+- Step 2: export を追加したときは `public_api_exports_test.dart` も同時に更新する
 
 ### 先に守るべき振る舞い固定
 
@@ -208,6 +176,6 @@
 
 ## Assumptions
 
-- 今回の成果物には、分析レポートと README の同期に加えて、公開面の回帰テストと旧来ヘルパーの互換テストも含みます。
+- 今回の成果物には、公開面の回帰テスト、旧来 helper の削除、変更履歴と移行案内の整備が含まれます。
 - TypeScript 向け基準は、そのままの数値ではなく、Dart 向けに LOC、責務分離、公開面、重複実装の観点へ読み替えて使いました。
 - 優先度は「壊れているか」よりも、「次の変更で二重修正や API 分岐が増えるか」を重視して付けました。

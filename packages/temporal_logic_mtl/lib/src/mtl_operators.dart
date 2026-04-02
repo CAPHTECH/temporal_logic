@@ -4,5 +4,3 @@
 /// This file stays as a bridge so older call sites continue to compile.
 export 'mtl_ast.dart';
 export 'mtl_evaluator.dart';
-/// Legacy helpers stay exported only for backward compatibility.
-export 'mtl_legacy_helpers.dart';

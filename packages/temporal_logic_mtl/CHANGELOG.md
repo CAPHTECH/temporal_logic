@@ -1,3 +1,10 @@
+## Unreleased
+
+* **BREAKING**: `checkEventuallyWithin`、`checkAlwaysWithin`、`checkUntilWithin` を削除しました。代わりに `evaluateMtlTrace` と timed formula を使ってください。
+* **API**: `temporal_logic_mtl.dart` は compatibility facade を経由せず、timed evaluator と timed AST を直接公開する形に整理しました。
+* **TEST**: 公開 export の回帰を固定する `public_api_exports_test.dart` を追加しました。
+* **DOCS**: `MIGRATION.md` に旧来ヘルパーからの移行手順を追加しました。
+
 ## 0.2.0
 
 * **FEAT**: Implemented timed `Release` (`R_I`) operator.

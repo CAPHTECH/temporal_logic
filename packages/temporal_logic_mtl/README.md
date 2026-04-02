@@ -64,4 +64,5 @@ void main() {
 
 * `evaluateMtlTrace` は timed trace を前提に評価します。
 * pure LTL の `Formula` を渡した場合も、そのまま評価できます。
-* 旧来の `checkEventuallyWithin` などの互換ヘルパーは内部の非推奨レイヤーに残していますが、main の公開入口ではありません。
+* 利用時は `package:temporal_logic_mtl/temporal_logic_mtl.dart` を正規の入口として使い、`src/` への直接 import は避けます。
+* 旧来の `checkEventuallyWithin`、`checkAlwaysWithin`、`checkUntilWithin` は削除しました。移行例は [MIGRATION.md](../../MIGRATION.md) にまとめています。

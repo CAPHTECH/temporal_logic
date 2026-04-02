@@ -1,4 +1,8 @@
 /// Support for Metric Temporal Logic (MTL) evaluation on timed traces.
+///
+/// Stable public entry point for `temporal_logic_mtl`.
+/// Application code should import this library instead of files under `src/`.
+/// Files in `src/` are implementation details and may change during refactoring.
 library temporal_logic_mtl;
 
 // This library extends temporal_logic_core with Metric Temporal Logic (MTL)
@@ -42,24 +46,21 @@ export 'package:temporal_logic_core/temporal_logic_core.dart'
 // or users will need to construct TimedTrace manually or use fake_async.
 // For now, we don't export a recorder from here.
 
-export 'src/mtl_operators.dart'
+export 'src/mtl_evaluator.dart'
     show
-        evaluateMtlTrace, // New primary evaluator
-        EventuallyTimed, // New AST node
-        AlwaysTimed, // New AST node
-        UntilTimed, // New AST node
-        ReleaseTimed, // Export ReleaseTimed
-        WeakUntilTimed; // Export WeakUntilTimed
-// Keep deprecated functions exported for backward compatibility? Or remove?
-// Decide based on desired breakage. For now, keep them exported but deprecated.
-// export 'src/mtl_operators.dart'
-//    show checkEventuallyWithin, checkAlwaysWithin, checkUntilWithin;
+        evaluateMtlTrace; // New primary evaluator
+export 'src/mtl_ast.dart'
+    show
+        EventuallyTimed, // Timed AST node
+        AlwaysTimed, // Timed AST node
+        UntilTimed, // Timed AST node
+        ReleaseTimed, // Timed AST node
+        WeakUntilTimed; // Timed AST node
 
 // Do not export the test matcher from the library
 // export 'src/mtl_matchers.dart';
 
 // Extensions - Extensions are implicitly available
 
-// Export MTL specific components
-// export 'src/timed_trace.dart'; // Removed redundant export
-export 'src/time_interval.dart'; // Export the TimeInterval class
+// Export MTL specific components.
+export 'src/time_interval.dart';

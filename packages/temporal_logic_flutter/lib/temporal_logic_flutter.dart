@@ -1,5 +1,9 @@
 /// Flutter specific utilities for Temporal Logic checking,
 /// including Stream checkers, Widgets, and test matchers.
+///
+/// Stable public entry point for `temporal_logic_flutter`.
+/// Flutter applications should import this library instead of files under `src/`.
+/// The exported surface is intentionally curated and guarded by export tests.
 library temporal_logic_flutter;
 
 export 'package:temporal_logic_core/temporal_logic_core.dart'

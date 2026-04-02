@@ -53,3 +53,4 @@ void main() {
 * `evaluateTrace` は trace 上の本体の評価入口です。
 * `evaluateLtl` は「状態列だけを見たい」場合の補助関数です。
 * `EvaluationResult` は public API として再公開されています。
+* 利用時は `package:temporal_logic_core/temporal_logic_core.dart` を正規の入口として使い、`src/` への直接 import は避けます。
