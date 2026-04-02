@@ -4,20 +4,20 @@
 <!-- [![pub package](https://img.shields.io/pub/v/temporal_logic_flutter.svg)](https://pub.dev/packages/temporal_logic_flutter) -->
 <!-- [![Build Status](...)](...) -->
 
-`temporal_logic_flutter` は、Flutter の stream や widget から temporal logic を扱うための統合パッケージです。
-`temporal_logic_core` と `temporal_logic_mtl` の公開 API を再公開しながら、stream checker、widget、trace recorder、test matcher をまとめて提供します。
+`temporal_logic_flutter` is the integration package for using temporal logic from Flutter streams, widgets, and tests.
+It re-exports the supported public APIs from `temporal_logic_core` and `temporal_logic_mtl`, and adds stream checkers, widgets, trace recording, and test helpers.
 
 ## Features
 
 * **Stream checkers**: `StreamLtlChecker`, `StreamMtlChecker`, `StreamSustainedStateChecker`
 * **Widgets**: `LtlCheckerWidget`, `MtlCheckerWidget`, `SustainedStateCheckerWidget`
 * **Trace utilities**: `TraceRecorder`
-* **Test support**: `temporal_logic_flutter_test.dart` から `satisfiesLtl` matcher を利用可能
+* **Test support**: `satisfiesLtl` is available from `temporal_logic_flutter_test.dart`
 * **Shared control types**: `CheckStatus`, `StreamEvaluationStart`
 
 ## Getting Started
 
-`pubspec.yaml` に Flutter と temporal logic の依存関係を追加します。
+Add Flutter and the temporal logic packages to `pubspec.yaml`.
 
 ```yaml
 dependencies:
@@ -28,7 +28,7 @@ dependencies:
   temporal_logic_flutter: ^0.1.2
 ```
 
-その後 `flutter pub get` を実行します。
+Then run `flutter pub get`.
 
 ## Usage
 
@@ -118,9 +118,9 @@ testWidgets('widget follows the LTL rule', (tester) async {
 
 ## Notes
 
-* `LtlCheckerWidget` の `builder` は `bool` を受け取ります。
-* `MtlCheckerWidget` の `builder` は `bool` と `EvaluationResult` を受け取ります。
-* `StreamEvaluationStart.beginning` は蓄積 trace の先頭から評価し、`current` は最新イベントから評価します。
-* `TraceRecorder` は widget ではなく、テストやアプリ側から明示的に `initialize` と `record` を呼ぶ記録ユーティリティです。
-* アプリ本体は `package:temporal_logic_flutter/temporal_logic_flutter.dart`、テストは `package:temporal_logic_flutter/temporal_logic_flutter_test.dart` を正規の入口として使い、`src/` への直接 import は避けます。
-* `temporal_logic_flutter_test.dart` は `temporal_logic_flutter.dart` と matcher を再公開します。
+* The `builder` of `LtlCheckerWidget` receives a `bool`.
+* The `builder` of `MtlCheckerWidget` receives a `bool` and an `EvaluationResult`.
+* `StreamEvaluationStart.beginning` evaluates from the start of the accumulated trace, while `current` evaluates from the most recent event.
+* `TraceRecorder` is an explicit recording utility for tests or application code. Call `initialize` and `record` yourself.
+* Use `package:temporal_logic_flutter/temporal_logic_flutter.dart` for runtime code and `package:temporal_logic_flutter/temporal_logic_flutter_test.dart` for tests, and avoid importing from `src/` directly.
+* `temporal_logic_flutter_test.dart` re-exports `temporal_logic_flutter.dart` together with the matcher helpers.

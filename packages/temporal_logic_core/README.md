@@ -4,27 +4,27 @@
 <!-- [![pub package](https://img.shields.io/pub/v/temporal_logic_core.svg)](https://pub.dev/packages/temporal_logic_core) -->
 <!-- [![Build Status](...)](...) -->
 
-`temporal_logic_core` は、命題論理と Linear Temporal Logic (LTL) の共通基盤を提供します。
-AST、Trace、評価結果、そして `evaluateTrace` / `evaluateLtl` の入口をまとめて公開します。
+`temporal_logic_core` provides the shared foundation for propositional logic and Linear Temporal Logic (LTL).
+It exports the AST, trace model, evaluation result types, and the main entry points such as `evaluateTrace` and `evaluateLtl`.
 
 ## Features
 
 * **AST**: `Formula`, `AtomicProposition`, `Not`, `And`, `Or`, `Implies`, `Next`, `Always`, `Eventually`, `Until`, `WeakUntil`, `Release`
 * **Trace model**: `Trace`, `TraceEvent`, `TimedValue`
-* **Evaluation**: `evaluateTrace` による trace ベースの評価と、`evaluateLtl` による簡易 LTL 評価
-* **Result details**: `EvaluationResult` に `holds`, `reason`, `relatedIndex`, `relatedTimestamp` を保持
+* **Evaluation**: trace-based evaluation with `evaluateTrace` and a convenience LTL entry point with `evaluateLtl`
+* **Result details**: `EvaluationResult` exposes `holds`, `reason`, `relatedIndex`, and `relatedTimestamp`
 * **Builder DSL**: `state`, `event`, `next`, `always`, `eventually`, `until`, `weakUntil`, `release`
 
 ## Getting Started
 
-`pubspec.yaml` に追加します。
+Add the package to `pubspec.yaml`.
 
 ```yaml
 dependencies:
   temporal_logic_core: ^0.1.1
 ```
 
-その後 `flutter pub get` または `dart pub get` を実行します。
+Then run `flutter pub get` or `dart pub get`.
 
 ## Usage
 
@@ -46,11 +46,11 @@ void main() {
 }
 ```
 
-`Trace.fromList` は順序に基づいて trace を作るときに便利です。timestamp を明示したい場合は `Trace([TraceEvent(...), ...])` を使います。
+`Trace.fromList` is convenient when you want to build a trace from an ordered sequence of values. If you need explicit timestamps, use `Trace([TraceEvent(...), ...])`.
 
 ## Notes
 
-* `evaluateTrace` は trace 上の本体の評価入口です。
-* `evaluateLtl` は「状態列だけを見たい」場合の補助関数です。
-* `EvaluationResult` は public API として再公開されています。
-* 利用時は `package:temporal_logic_core/temporal_logic_core.dart` を正規の入口として使い、`src/` への直接 import は避けます。
+* `evaluateTrace` is the main entry point for evaluating formulas against traces.
+* `evaluateLtl` is a convenience helper when you only want to evaluate a plain sequence of states.
+* `EvaluationResult` is part of the public API.
+* Use `package:temporal_logic_core/temporal_logic_core.dart` as the supported entry point, and avoid importing from `src/` directly.
